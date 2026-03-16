@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: traefik
+  labels:
+    app.kubernetes.io/name: traefik
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: traefik
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: traefik
+    spec:
+      serviceAccountName: traefik
+      containers:
+        - name: traefik
+          image: traefik:v3.1
+          args:
+            - --api.dashboard=true
+            - --api.insecure=true
+            - --providers.kubernetesingress=true
+            - --providers.kubernetescrd=true
+            - --entrypoints.web.address=:80
+            - --entrypoints.mqtt.address=:1883
+            - --ping=true
+          ports:
+            - name: web
+              containerPort: 80
+            - name: mqtt
+              containerPort: 1883
+            - name: dashboard
+              containerPort: 8080

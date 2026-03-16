@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: iotea-backend
+  labels:
+    app.kubernetes.io/name: iotea-backend
+    app.kubernetes.io/component: api
+    app.kubernetes.io/part-of: iotea
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: iotea-backend
+  ports:
+    - name: http
+      protocol: TCP
+      port: 3000
+      targetPort: 3000

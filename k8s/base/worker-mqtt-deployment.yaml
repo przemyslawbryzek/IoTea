@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: iotea-worker-mqtt
+  labels:
+    app.kubernetes.io/name: iotea-worker-mqtt
+    app.kubernetes.io/component: worker
+    app.kubernetes.io/part-of: iotea
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: iotea-worker-mqtt
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: iotea-worker-mqtt
+        app.kubernetes.io/component: worker
+        app.kubernetes.io/part-of: iotea
+    spec:
+      containers:
+        - name: iotea-worker-mqtt
+          image: iotea-worker-mqtt:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: MQTT_URL
+              valueFrom:
+                secretKeyRef:
+                  name: iotea-secrets
+                  key: MQTT_URL
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: iotea-secrets
+                  key: DATABASE_URL
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: iotea-secrets
+                  key: REDIS_URL

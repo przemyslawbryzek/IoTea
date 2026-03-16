@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: iotea-frontend
+  labels:
+    app.kubernetes.io/name: iotea-frontend
+    app.kubernetes.io/component: web
+    app.kubernetes.io/part-of: iotea
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: iotea-frontend
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: iotea-frontend
+        app.kubernetes.io/component: web
+        app.kubernetes.io/part-of: iotea
+    spec:
+      containers:
+        - name: iotea-frontend
+          image: iotea-frontend:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80

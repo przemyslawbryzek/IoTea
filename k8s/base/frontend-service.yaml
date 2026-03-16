@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: iotea-frontend
+  labels:
+    app.kubernetes.io/name: iotea-frontend
+    app.kubernetes.io/component: web
+    app.kubernetes.io/part-of: iotea
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: iotea-frontend
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: 80
