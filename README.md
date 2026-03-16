@@ -112,7 +112,7 @@ Szczegółowy opis deploymentu jest w [k8s/README.md](k8s/README.md).
 
 Szybki start:
 
-1. Dodaj host lokalny:
+1. Dodaj host lokalny (opcjonalne):
 
 ```bash
 echo "127.0.0.1 iotea.local" | sudo tee -a /etc/hosts

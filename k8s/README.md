@@ -47,11 +47,6 @@ nc -vz 127.0.0.1 31883
 - działający klaster Kubernetes (np. Docker Desktop)
 - `kubectl`
 - `docker`
-- wpis w `/etc/hosts`:
-
-```bash
-echo "127.0.0.1 iotea.local" | sudo tee -a /etc/hosts
-```
 
 ## Budowanie obrazów lokalnych
 
