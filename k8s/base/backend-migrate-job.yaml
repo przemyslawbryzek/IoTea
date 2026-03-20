@@ -1,0 +1,40 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: iotea-backend-migrate
+  labels:
+    app.kubernetes.io/name: iotea-backend-migrate
+    app.kubernetes.io/component: migration
+    app.kubernetes.io/part-of: iotea
+spec:
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 300
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: iotea-backend-migrate
+        app.kubernetes.io/component: migration
+        app.kubernetes.io/part-of: iotea
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: prisma-migrate
+          image: iotea-backend:latest
+          imagePullPolicy: IfNotPresent
+          command: ["sh", "-c"]
+          args:
+            - |
+              if [ -d prisma/migrations ] && [ "$(ls -A prisma/migrations 2>/dev/null)" ]; then
+                npx prisma migrate deploy --config prisma.config.ts
+              else
+                echo "No Prisma migrations found, running prisma db push"
+                npx prisma db push --accept-data-loss --config prisma.config.ts
+              fi
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: iotea-secrets
+                  key: DATABASE_URL

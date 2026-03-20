@@ -1,0 +1,32 @@
+model tea_category {
+    id  Int @id @default(autoincrement())
+    name String
+    teas Tea[]
+}
+model Tea {
+    id  Int @id @default(autoincrement())
+    name String 
+    description String?
+    image_url String?
+    categoryId Int
+    category tea_category @relation(fields: [categoryId], references: [id])
+    brew_temp Int
+    instructions brewing_instructions[]
+}
+model brewing_style{
+    id  Int @id @default(autoincrement())
+    name String
+    description String?
+    instructions brewing_instructions[]
+}
+model brewing_instructions{
+    id  Int @id @default(autoincrement())
+    teaId Int
+    styleId Int
+    tea Tea @relation(fields: [teaId], references: [id])
+    style brewing_style @relation(fields: [styleId], references: [id])
+    grams_per_100ml Decimal
+    first_infusion_seconds Int
+    increment_seconds Int
+    max_infusions Int
+}

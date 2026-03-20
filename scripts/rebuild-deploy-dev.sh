@@ -110,10 +110,14 @@ deploy_k8s() {
   kubectl -n "$NAMESPACE" rollout restart deployment/iotea-backend
   kubectl -n "$NAMESPACE" rollout restart deployment/iotea-worker-mqtt
   kubectl -n "$NAMESPACE" rollout restart deployment/iotea-frontend
+  kubectl -n "$NAMESPACE" exec deploy/iotea-backend -- node prisma/seed.js
 
   log 'Waiting for rollouts to complete.'
   for deployment in "${DEPLOYMENTS[@]}"; do
-    kubectl -n "$NAMESPACE" rollout status "deployment/$deployment" --timeout="$ROLLOUT_TIMEOUT"
+    if ! kubectl -n "$NAMESPACE" rollout status "deployment/$deployment" --timeout="$ROLLOUT_TIMEOUT"; then
+      log "Rollout for $deployment did not complete in $ROLLOUT_TIMEOUT. Retrying once before rollback."
+      kubectl -n "$NAMESPACE" rollout status "deployment/$deployment" --timeout="$ROLLOUT_TIMEOUT"
+    fi
   done
 }
 

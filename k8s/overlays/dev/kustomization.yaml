@@ -3,6 +3,7 @@ kind: Kustomization
 namespace: iotea
 resources:
   - ../../base
+  - ../../addons/redis
   - secret.yaml
 images:
   - name: iotea-backend
