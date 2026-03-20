@@ -21,6 +21,11 @@ export class TeaService {
         },
         include: {
           category: true,
+          instructions: {
+            include: {
+              style: true,
+            },
+          },
         },
       }),
     );
