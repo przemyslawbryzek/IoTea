@@ -48,7 +48,7 @@ subgraph K8s["Kubernetes Cluster  -  self-hosted  -  Docker"]
     Traefik -->|HTTP| API
     Traefik -->|TCP :1883 LB| MQTT1 & MQTT2 & MQTT3
     API --> PG & Redis
-    Worker --> PG
+    Worker --> PG & Redis
     MQTT1 & MQTT2 & MQTT3 -->|subscribe| Worker
     API -->|publish command| Traefik
 end
