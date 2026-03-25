@@ -24,4 +24,4 @@ COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/prisma.config.ts ./prisma.config.ts
 RUN npx prisma generate --config prisma.config.ts
 EXPOSE 3000
-CMD ["node", "dist/src/apps/api/main.js"]
+CMD ["node", "dist/src/main.js"]
