@@ -10,18 +10,43 @@ import { RedisClientType, createClient } from 'redis';
 export class RedisService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(RedisService.name);
   private client: RedisClientType | null = null;
+  private available = false;
 
   async onModuleInit(): Promise<void> {
     const url = process.env.REDIS_URL ?? 'redis://localhost:6379';
+    const timeoutMs = Number(process.env.REDIS_CONNECT_TIMEOUT_MS ?? 1500);
 
     this.client = createClient({ url });
 
     this.client.on('error', (error: unknown) => {
       this.logger.error(`Redis connection error: ${String(error)}`);
+      this.available = false;
     });
 
-    await this.client.connect();
-    this.logger.log(`Redis connected: ${url}`);
+    try {
+      await Promise.race([
+        this.client.connect(),
+        new Promise<never>((_, reject) => {
+          setTimeout(
+            () => reject(new Error(`Redis connect timeout after ${timeoutMs}ms`)),
+            timeoutMs,
+          );
+        }),
+      ]);
+      this.available = true;
+      this.logger.log(`Redis connected: ${url}`);
+    } catch (error) {
+      this.available = false;
+      try {
+        this.client.destroy();
+      } catch {
+        // No-op: client may already be closed.
+      }
+      this.client = null;
+      this.logger.warn(
+        `Redis unavailable at startup (${url}). Falling back to no-cache mode: ${String(error)}`,
+      );
+    }
   }
 
   async onModuleDestroy(): Promise<void> {
@@ -47,6 +72,10 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     ttl: number,
     loader: () => Promise<T>,
   ): Promise<T> {
+    if (!this.client || !this.available || !this.client.isOpen) {
+      return loader();
+    }
+
     const client = this.getClient();
 
     try {
