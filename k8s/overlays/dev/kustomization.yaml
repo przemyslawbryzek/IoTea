@@ -4,6 +4,7 @@ namespace: iotea
 resources:
   - ../../base
   - ../../addons/redis
+  - ../../addons/emqx
   - secret.yaml
 images:
   - name: iotea-backend

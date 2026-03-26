@@ -1,9 +1,12 @@
 import { Controller, Request, Post, UseGuards, Body } from '@nestjs/common';
-import { ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
-import { LocalAuthGuard } from './local-auth.guard';
+import { LocalAuthGuard } from './guards/local-auth.guard';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { RegisterDeviceDto } from './dto/register-device.dto';
+import { User } from './decorators/user.decorator';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -23,5 +26,16 @@ export class AuthController {
   @Post('login')
   async login(@Request() req) {
     return this.authService.login(req.user);
+  }
+  @ApiOperation({ summary: 'Register device' })
+  @ApiBody({ type: RegisterDeviceDto })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Post('device/register')
+  async registerDevice(
+    @Body() registerDeviceDto: RegisterDeviceDto,
+    @User() user: { id: number; email: string; name: string; role: string },
+  ) {
+    return this.authService.registerDevice(user.id, registerDeviceDto.name);
   }
 }

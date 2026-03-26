@@ -47,6 +47,8 @@ spec:
               value: emqx-headless.$(POD_NAMESPACE).svc.cluster.local
             - name: EMQX_CLUSTER__DNS__RECORD_TYPE
               value: srv
+            - name: EMQX_MANAGEMENT__ENABLE
+              value: "true"
             - name: EMQX_NODE__COOKIE
               valueFrom:
                 secretKeyRef:

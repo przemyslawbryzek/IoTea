@@ -21,7 +21,7 @@ spec:
       containers:
         - name: iotea-backend
           image: iotea-backend:latest
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           ports:
             - containerPort: 3000
           startupProbe:
@@ -59,3 +59,28 @@ spec:
                 secretKeyRef:
                   name: iotea-secrets
                   key: REDIS_URL
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: iotea-secrets
+                  key: JWT_SECRET
+            - name: MQTT_URL
+              valueFrom:
+                secretKeyRef:
+                  name: iotea-secrets
+                  key: MQTT_URL
+            - name: MQTT_API_URL
+              valueFrom:
+                secretKeyRef:
+                  name: iotea-secrets
+                  key: MQTT_API_URL
+            - name: MQTT_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: iotea-secrets
+                  key: MQTT_API_KEY
+            - name: MQTT_API_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: iotea-secrets
+                  key: MQTT_API_SECRET

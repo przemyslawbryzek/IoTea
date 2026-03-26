@@ -1,14 +1,15 @@
-model User {
+model user {
   id           Int              @id @default(autoincrement())
   email        String           @unique
   password     String
   name         String?
-  role         Role             @default(USER)
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
+  role         role             @default(USER)
+  created_at    DateTime         @default(now())
+  updated_at    DateTime         @updatedAt
+  devices      device[]
 }
 
-enum Role {
+enum role {
   USER
   ADMIN
 }

@@ -36,6 +36,9 @@ spec:
     - name: mqtt-ws
       port: 8083
       targetPort: 8083
+    - name: dashboard
+      port: 18083
+      targetPort: 18083
 ---
 apiVersion: v1
 kind: Service
