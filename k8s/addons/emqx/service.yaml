@@ -17,6 +17,12 @@ spec:
     - name: mqtt-ws
       port: 8083
       targetPort: 8083
+    - name: ekka
+      port: 4370
+      targetPort: 4370
+    - name: cluster-rpc
+      port: 5369
+      targetPort: 5369
 ---
 apiVersion: v1
 kind: Service

@@ -6,6 +6,7 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDeviceDto } from './dto/register-device.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { User } from './decorators/user.decorator';
 
 @ApiTags('auth')
@@ -37,5 +38,11 @@ export class AuthController {
     @User() user: { id: number; email: string; name: string; role: string },
   ) {
     return this.authService.registerDevice(user.id, registerDeviceDto.name);
+  }
+  @ApiOperation({ summary: 'Refresh access token' })
+  @ApiBody({ type: RefreshTokenDto })
+  @Post('refresh')
+  async refresh(@Body() { refresh_token }: RefreshTokenDto) {
+    return this.authService.refreshToken(refresh_token);
   }
 }
