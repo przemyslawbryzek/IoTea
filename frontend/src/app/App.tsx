@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Search, Plus, ArrowUpDown } from "lucide-react";
+import { Search, Plus, ArrowUpDown, Loader2 } from "lucide-react";
 import { Input } from "./components/ui/input";
 import { Button } from "./components/ui/button";
 import { TeaCard, Tea } from "./components/TeaCard";
@@ -14,6 +14,7 @@ import {
   TeaCategory,
 } from "./components/CategoryFilter";
 import { MobileMenu } from "./components/MobileMenu";
+import { useTeas } from "./hooks/useTeas";
 import logoImage from "../assets/065ee734cc67b8b74fdd5b0b85c78061b5abaec9.png";
 
 interface BrewHistoryItem {
@@ -28,114 +29,13 @@ interface UserData {
   email: string;
 }
 
-const initialTeas: Tea[] = [
-  {
-    id: "1",
-    name: "Zielona herbata",
-    description:
-      "Delikatna i orzeźwiająca herbata zielona o subtelnym, lekko słodkawym smaku. Bogata w antyoksydanty.",
-    brewTime: 3,
-    temperature: 80,
-    image:
-      "https://images.unsplash.com/photo-1602943543714-cf535b048440?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxncmVlbiUyMHRlYSUyMGxlYXZlc3xlbnwxfHx8fDE3NzMyMTk0NzJ8MA&ixlib=rb-4.1.0&q=80&w=1080",
-    category: "zielona",
-  },
-  {
-    id: "2",
-    name: "Czarna herbata",
-    description:
-      "Mocna i aromatyczna czarna herbata z wyrazistym smakiem. Idealna na poranek.",
-    brewTime: 5,
-    temperature: 95,
-    image:
-      "https://images.unsplash.com/photo-1693114812744-ed1b09d05984?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxibGFjayUyMHRlYSUyMGN1cHxlbnwxfHx8fDE3NzMyMTAzOTB8MA&ixlib=rb-4.1.0&q=80&w=1080",
-    category: "czarna",
-  },
-  {
-    id: "3",
-    name: "Biała herbata",
-    description:
-      "Najdelikatniejsza z herbat, o słodkim kwiatowym aromacie. Zawiera najmniej kofeiny.",
-    brewTime: 7,
-    temperature: 75,
-    image:
-      "https://images.unsplash.com/photo-1543060895-03f57478a710?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx3aGl0ZSUyMHRlYSUyMGxlYXZlc3xlbnwxfHx8fDE3NzMyMzMwNDR8MA&ixlib=rb-4.1.0&q=80&w=1080",
-    category: "biała",
-  },
-  {
-    id: "4",
-    name: "Oolong",
-    description:
-      "Herbata półfermentowana łącząca cechy herbat zielonych i czarnych. Złożony, głęboki smak.",
-    brewTime: 4,
-    temperature: 85,
-    image:
-      "https://images.unsplash.com/photo-1627894006066-b45786537103?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxvb2xvbmclMjB0ZWF8ZW58MXx8fHwxNzczMjMzMDQ0fDA&ixlib=rb-4.1.0&q=80&w=1080",
-    category: "oolong",
-  },
-  {
-    id: "5",
-    name: "Pu-erh",
-    description:
-      "Fermentowana herbata o ziemistym, głębokim smaku. Z wiekiem nabiera charakteru.",
-    brewTime: 5,
-    temperature: 95,
-    image:
-      "https://images.unsplash.com/photo-1680703335176-ab1fad0af776?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwdSUyMGVyaCUyMHRlYXxlbnwxfHx8fDE3NzMxMzcyMzJ8MA&ixlib=rb-4.1.0&q=80&w=1080",
-    category: "pu-erh",
-  },
-  {
-    id: "6",
-    name: "Rumianek",
-    description:
-      "Kojący napar ziołowy o delikatnym kwiatowym smaku. Pomaga w relaksacji i zasypianiu.",
-    brewTime: 8,
-    temperature: 100,
-    image:
-      "https://images.unsplash.com/photo-1632639519728-417854c47d9c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxoZXJiYWwlMjBjaGFtb21pbGUlMjB0ZWF8ZW58MXx8fHwxNzczMTQxMDg5fDA&ixlib=rb-4.1.0&q=80&w=1080",
-    category: "ziołowa",
-  },
-  {
-    id: "7",
-    name: "Rooibos",
-    description:
-      "Czerwona herbata z Afryki Południowej, naturalnie słodka i bezkofeινowa. Bogata w minerały.",
-    brewTime: 6,
-    temperature: 100,
-    image:
-      "https://images.unsplash.com/photo-1606695980435-f0b57d051c2d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxyb29pYm9zJTIwdGVhfGVufDF8fHx8MTc3MzIzMzA0NXww&ixlib=rb-4.1.0&q=80&w=1080",
-    category: "ziołowa",
-  },
-  {
-    id: "8",
-    name: "Matcha",
-    description:
-      "Sproszkowana zielona herbata o intensywnym smaku i mocy. Wysoka zawartość antyoksydantów.",
-    brewTime: 2,
-    temperature: 70,
-    image:
-      "https://images.unsplash.com/photo-1708572727896-117b5ea25a86?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtYXRjaGElMjBncmVlbiUyMHRlYXxlbnwxfHx8fDE3NzMyMTA3NTF8MA&ixlib=rb-4.1.0&q=80&w=1080",
-    category: "zielona",
-  },
-  {
-    id: "9",
-    name: "Sencha",
-    description:
-      "Popularna japońska herbata zielona o świeżym, trawiastym smaku i lekko słodkim posmaku.",
-    brewTime: 2,
-    temperature: 75,
-    image:
-      "https://images.unsplash.com/photo-1695188603812-4477da0b1252?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxqYXBhbmVzZSUyMGdyZWVuJTIwdGVhJTIwbGVhdmVzfGVufDF8fHx8MTc3NDM1MjkxNHww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral",
-    category: "zielona",
-  },
-];
-
 function App() {
-  const [teas, setTeas] = useState<Tea[]>(initialTeas);
+  const { teas, setTeas, categories, loading, error, refetch } = useTeas();
+
+  console.log('App render:', { teas: teas.length, loading, error });
+
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<
-    TeaCategory | "all"
-  >("all");
+  const [selectedCategory, setSelectedCategory] = useState<string | "all">("all");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">(
     "asc",
   );
@@ -160,26 +60,44 @@ function App() {
     ? userFavorites[currentUser.email] || []
     : [];
 
+  // Dostępne kategorie herbat
+  const availableCategories = useMemo(() => {
+    const categorySet = new Set<string>();
+    teas.forEach((tea) => {
+      if (tea.category) {
+        categorySet.add(tea.category);
+      }
+    });
+    return Array.from(categorySet).sort();
+  }, [teas]);
+
   // Filtrowanie i sortowanie herbat
   const filteredTeas = useMemo(() => {
+    console.log('Computing filteredTeas from:', teas.length, 'teas');
     let filtered = teas.filter((tea) =>
       tea.name
         .toLowerCase()
         .includes(searchQuery.toLowerCase()),
     );
 
+    console.log('After search filter:', filtered.length);
+
     // Filtrowanie po kategorii
     if (selectedCategory !== "all") {
       filtered = filtered.filter(
         (tea) => tea.category === selectedCategory,
       );
+      console.log('After category filter:', filtered.length);
     }
 
     // Sortowanie
-    return filtered.sort((a, b) => {
+    const sorted = filtered.sort((a, b) => {
       const comparison = a.name.localeCompare(b.name);
       return sortOrder === "asc" ? comparison : -comparison;
     });
+
+    console.log('Final filtered teas:', sorted.length);
+    return sorted;
   }, [teas, searchQuery, selectedCategory, sortOrder]);
 
   const handleAddTea = (
@@ -206,11 +124,25 @@ function App() {
   };
 
   const handleEditTea = (tea: Tea) => {
+    // Nie pozwól na edycję herbat z API
+    if (tea.apiId) {
+      toast.error("Nie możesz edytować herbat z bazy danych");
+      return;
+    }
     setEditingTea(tea);
     setIsDialogOpen(true);
   };
 
   const handleDeleteTea = (id: string) => {
+    // Znajdź herbatę
+    const tea = teas.find((t) => t.id === id);
+
+    // Nie pozwól na usuwanie herbat z API
+    if (tea?.apiId) {
+      toast.error("Nie możesz usunąć herbat z bazy danych");
+      return;
+    }
+
     setTeas(teas.filter((tea) => tea.id !== id));
     toast.success("Herbata została usunięta");
   };
@@ -357,12 +289,26 @@ function App() {
             <CategoryFilter
               selectedCategory={selectedCategory}
               onCategoryChange={setSelectedCategory}
+              availableCategories={availableCategories}
             />
           </div>
 
           {/* Lista herbat */}
           <div className="space-y-3 mt-4 pb-4">
-            {filteredTeas.length === 0 ? (
+            {loading ? (
+              <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                <Loader2 className="w-8 h-8 animate-spin mb-2" />
+                <p className="text-sm">Ładowanie herbat...</p>
+              </div>
+            ) : error ? (
+              <div className="text-center py-8">
+                <p className="text-sm text-destructive mb-2">Błąd podczas ładowania herbat</p>
+                <p className="text-xs text-muted-foreground mb-4">{error}</p>
+                <Button onClick={refetch} variant="outline" size="sm">
+                  Spróbuj ponownie
+                </Button>
+              </div>
+            ) : filteredTeas.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground text-sm">
                 Nie znaleziono herbat
               </div>
@@ -380,6 +326,7 @@ function App() {
                   onDelete={handleDeleteTea}
                   onSelect={handleSelectTea}
                   onToggleFavorite={handleToggleFavorite}
+                  showActions={!tea.apiId}
                 />
               ))
             )}

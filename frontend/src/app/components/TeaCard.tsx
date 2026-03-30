@@ -4,12 +4,13 @@ import { Card } from './ui/card';
 
 export interface Tea {
   id: string;
+  apiId?: number; // ID z API (jeśli herbata pochodzi z backendu)
   name: string;
   description: string;
   brewTime: number; // w minutach
   temperature: number; // w stopniach Celsjusza
   image: string;
-  category: 'zielona' | 'czarna' | 'biała' | 'oolong' | 'pu-erh' | 'ziołowa';
+  category: string; // kategoria herbaty
   isFavorite?: boolean;
 }
 
