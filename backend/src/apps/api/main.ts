@@ -10,6 +10,13 @@ export async function bootstrapApi() {
 
   app.setGlobalPrefix('api');
 
+  app.enableCors({
+    origin: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
+  });
+
   const config = new DocumentBuilder()
     .setTitle('IoTea API')
     .setDescription('IoTea API description')

@@ -79,13 +79,14 @@ class MQTTClient:
     
     def publish_status(self, status: str):
         if not self.connected:
+            logger.info(f"Cannot publish status, MQTT not connected")
             return False
-        
         payload = {
             "device_id": self.device_id,
             "status": status,
             "timestamp": time.time()
         }
+        logger.info(f"Status: {payload}")
         self.client.publish(f"device/{self.device_id}/status", 
                            json.dumps(payload), qos=1, retain=True)
         return True

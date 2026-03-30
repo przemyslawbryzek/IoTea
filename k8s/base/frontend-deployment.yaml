@@ -21,6 +21,6 @@ spec:
       containers:
         - name: iotea-frontend
           image: iotea-frontend:latest
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           ports:
             - containerPort: 80
