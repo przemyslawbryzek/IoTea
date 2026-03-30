@@ -1,0 +1,16 @@
+model device {
+    id  Int @id @default(autoincrement())
+    name String
+    owner_id Int
+    owner user @relation(fields: [owner_id], references: [id])
+    model String?
+    firmware_version String?
+    public_key String?
+    mqtt_username String @unique
+    mqtt_password String
+    last_seen DateTime?
+    created_at DateTime @default(now())
+    updated_at DateTime @updatedAt
+    @@index([owner_id])
+    @@index([last_seen])
+}

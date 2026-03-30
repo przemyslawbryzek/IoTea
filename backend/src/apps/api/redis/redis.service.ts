@@ -28,7 +28,8 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
         this.client.connect(),
         new Promise<never>((_, reject) => {
           setTimeout(
-            () => reject(new Error(`Redis connect timeout after ${timeoutMs}ms`)),
+            () =>
+              reject(new Error(`Redis connect timeout after ${timeoutMs}ms`)),
             timeoutMs,
           );
         }),

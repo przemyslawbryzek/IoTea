@@ -21,7 +21,7 @@ spec:
       containers:
         - name: iotea-worker-mqtt
           image: iotea-worker-mqtt:latest
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           env:
             - name: NODE_ENV
               value: production
@@ -40,3 +40,13 @@ spec:
                 secretKeyRef:
                   name: iotea-secrets
                   key: REDIS_URL
+            - name: MQTT_WORKER_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: iotea-secrets
+                  key: MQTT_WORKER_USERNAME
+            - name: MQTT_WORKER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: iotea-secrets
+                  key: MQTT_WORKER_PASSWORD

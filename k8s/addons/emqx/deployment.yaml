@@ -13,6 +13,14 @@ spec:
   selector:
     matchLabels:
       app.kubernetes.io/name: emqx
+  volumeClaimTemplates:
+    - metadata:
+        name: emqx-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi
   template:
     metadata:
       labels:
@@ -52,10 +60,37 @@ spec:
                 secretKeyRef:
                   name: iotea-secrets
                   key: EMQX_COOKIE
+
             - name: EMQX_DASHBOARD__DEFAULT_USERNAME
               value: admin
             - name: EMQX_DASHBOARD__DEFAULT_PASSWORD
               value: admin
+
+            - name: EMQX_MANAGEMENT__ENABLE
+              value: "true"
+
+            - name: EMQX_NODE__DATA_DIR
+              value: "/opt/emqx/data"
+
+            - name: EMQX_API_KEY__BOOTSTRAP_FILE
+              value: "/opt/emqx/data/bootstrap_api_key"
+
+            - name: EMQX_AUTHENTICATION__1__MECHANISM
+              value: "password_based"
+            - name: EMQX_AUTHENTICATION__1__BACKEND
+              value: "built_in_database"
+            - name: EMQX_AUTHENTICATION__1__ENABLE
+              value: "true"
+            - name: EMQX_AUTHENTICATION__1__PASSWORD_HASH_ALGORITHM__NAME
+              value: "sha256"
+
+          volumeMounts:
+            - name: emqx-data
+              mountPath: /opt/emqx/data
+            - name: bootstrap-api-key
+              mountPath: /opt/emqx/data/bootstrap_api_key
+              subPath: bootstrap_api_key
+
           readinessProbe:
             tcpSocket:
               port: mqtt
@@ -66,3 +101,8 @@ spec:
               port: mqtt
             initialDelaySeconds: 30
             periodSeconds: 10
+
+      volumes:
+        - name: bootstrap-api-key
+          secret:
+            secretName: emqx-bootstrap-api-key
