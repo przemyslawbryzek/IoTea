@@ -10,6 +10,7 @@ from config_manager import ConfigManager
 from wifi_manager import WiFiManager
 from mqtt_client import MQTTClient
 from ble_server import BLEServer
+from brew import BrewManager
 
 logging.basicConfig(
     level=logging.INFO,
@@ -37,10 +38,11 @@ class TeaDevice:
         self.wifi_manager = WiFiManager()
         self.mqtt_client = None
         self.ble_server = None
+        self.brew_manager = None
         self.running = True
         self.online = False
         self._last_status_publish = 0
-        self._status_interval = 30  # sekundy
+        self._status_interval = 30 
         signal.signal(signal.SIGINT, self.shutdown)
         signal.signal(signal.SIGTERM, self.shutdown)
 
@@ -155,6 +157,7 @@ class TeaDevice:
             logger.info("MQTT connected successfully")
             self.mqtt_client.publish_status('online')
             self._last_status_publish = time.time()
+            self.brew_manager = BrewManager(self.mqtt_client)
             self.state = DeviceState.OPERATIONAL
         else:
             logger.error("MQTT connection failed")
@@ -176,6 +179,12 @@ class TeaDevice:
         for cmd in commands:
             self._execute_command(cmd)
 
+        if self.brew_manager and self.brew_manager.is_brewing():
+            progress = self.brew_manager.get_brew_progress()
+            if progress and progress['remaining'] <= 0:
+                logger.info(f"Brew time elapsed - ending brew")
+                self.brew_manager.handle_brew_end()
+
         time.sleep(5)
 
     def _handle_reconnecting(self):
@@ -191,15 +200,28 @@ class TeaDevice:
 
     def _execute_command(self, command):
         cmd_type = command.get('type')
+        logger.info(f"Executing command: {cmd_type}")
 
-        if cmd_type == 'brew':
-            """Do smth"""
+        if cmd_type == 'brew_start':
+            self._handle_brew_start(command)
 
-        elif cmd_type == 'stop':
-            """Do smth"""
+        elif cmd_type == 'brew_stop':
+            self._handle_brew_stop(command)
 
         elif cmd_type == 'ping':
-            self.mqtt_client.publish_command_ack(command['id'], 'pong')
+            self.mqtt_client.publish_status('pong')
+
+    def _handle_brew_start(self, command):
+        if self.brew_manager:
+            self.brew_manager.handle_brew_start(command)
+        else:
+            logger.error("Brew manager not initialized")
+
+    def _handle_brew_stop(self, command):
+        if self.brew_manager:
+            self.brew_manager.handle_brew_stop(command)
+        else:
+            logger.error("Brew manager not initialized")
 
     def shutdown(self, signum, frame):
         logger.info("Shutting down...")

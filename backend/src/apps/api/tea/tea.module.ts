@@ -8,5 +8,6 @@ import { RedisModule } from '../redis/redis.module';
   imports: [PrismaModule, RedisModule],
   controllers: [TeaController],
   providers: [TeaService],
+  exports: [TeaService],
 })
 export class TeaModule {}

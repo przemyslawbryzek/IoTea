@@ -84,3 +84,13 @@ spec:
                 secretKeyRef:
                   name: iotea-secrets
                   key: MQTT_API_SECRET
+            - name: MQTT_API_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: iotea-secrets
+                  key: MQTT_API_USERNAME
+            - name: MQTT_API_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: iotea-secrets
+                  key: MQTT_API_PASSWORD

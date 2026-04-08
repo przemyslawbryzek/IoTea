@@ -47,4 +47,20 @@ export class TeaService {
       }),
     );
   }
+
+  getInstructionById(id: number) {
+    return this.redis.getOrSet(`tea:instruction:${id}`, 120, () =>
+      this.prisma.brewing_instructions.findUnique({
+        where: { id },
+        include: {
+          tea: {
+            select: {
+              brew_temp: true,
+            },
+          },
+          style: true,
+        },
+      }),
+    );
+  }
 }

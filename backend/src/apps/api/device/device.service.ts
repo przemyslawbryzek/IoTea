@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  ForbiddenException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
 
@@ -38,7 +34,17 @@ export class DeviceService {
   }
 
   async getOne(userId: number, deviceId: number) {
-    const device = await this._findAndVerify(userId, deviceId);
+    const device = await this.prisma.device.findUnique({
+      where: { id: deviceId },
+      select: {
+        id: true,
+        name: true,
+        model: true,
+        firmware_version: true,
+        last_seen: true,
+        created_at: true,
+      },
+    });
 
     const status = await this._getStatusFromRedis(deviceId);
 
@@ -49,8 +55,6 @@ export class DeviceService {
   }
 
   async getStatus(userId: number, deviceId: number) {
-    await this._findAndVerify(userId, deviceId);
-
     const status = await this._getStatusFromRedis(deviceId);
 
     if (!status) {
@@ -66,32 +70,6 @@ export class DeviceService {
       online: true,
       ...status,
     };
-  }
-
-  private async _findAndVerify(userId: number, deviceId: number) {
-    const device = await this.prisma.device.findUnique({
-      where: { id: deviceId },
-      select: {
-        id: true,
-        name: true,
-        model: true,
-        firmware_version: true,
-        last_seen: true,
-        created_at: true,
-        owner_id: true,
-      },
-    });
-
-    if (!device) {
-      throw new NotFoundException(`Device ${deviceId} not found`);
-    }
-
-    if (device.owner_id !== userId) {
-      throw new ForbiddenException(`Access denied to device ${deviceId}`);
-    }
-
-    const { owner_id, ...rest } = device;
-    return rest;
   }
 
   private async _getStatusFromRedis(deviceId: number) {

@@ -86,7 +86,6 @@ class MQTTClient:
             "status": status,
             "timestamp": time.time()
         }
-        logger.info(f"Status: {payload}")
         self.client.publish(f"device/{self.device_id}/status", 
                            json.dumps(payload), qos=1, retain=True)
         return True
@@ -95,3 +94,49 @@ class MQTTClient:
         cmds = self._commands.copy()
         self._commands.clear()
         return cmds
+    
+    def publish_command_ack(self, command_id: str, result: str):
+        if not self.connected:
+            logger.warning(f"Cannot publish ACK, MQTT not connected")
+            return False
+        payload = {
+            "device_id": self.device_id,
+            "command_id": command_id,
+            "result": result,
+            "timestamp": time.time()
+        }
+        self.client.publish(f"ack/{self.device_id}/{command_id}", 
+                           json.dumps(payload), qos=1)
+        logger.info(f"Published ACK: {result}")
+        return True
+
+    def publish_brew_ack(self, brew_id: int, status: str = "brewing"):
+        if not self.connected:
+            logger.warning(f"Cannot publish brew ACK, MQTT not connected")
+            return False
+        payload = {
+            "device_id": self.device_id,
+            "brew_id": brew_id,
+            "status": status,
+            "timestamp": time.time()
+        }
+        self.client.publish(f"device/{self.device_id}/brew/ack", 
+                           json.dumps(payload), qos=1)
+        logger.info(f"Published brew ACK: brew_id={brew_id}, status={status}")
+        return True
+
+    def publish_brew_end(self, brew_id: int):
+        if not self.connected:
+            logger.warning(f"Cannot publish brew end, MQTT not connected")
+            return False
+        payload = {
+            "device_id": self.device_id,
+            "brew_id": brew_id,
+            "status": "completed",
+            "timestamp": time.time()
+        }
+        self.client.publish(f"device/{self.device_id}/brew/end", 
+                           json.dumps(payload), qos=1)
+        logger.info(f"Published brew end: brew_id={brew_id}")
+        return True
+        return True

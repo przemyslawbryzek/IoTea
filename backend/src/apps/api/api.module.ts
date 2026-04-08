@@ -5,6 +5,8 @@ import { PrismaModule } from './prisma/prisma.module';
 import { RedisModule } from './redis/redis.module';
 import { AuthModule } from './auth/auth.module';
 import { DeviceModule } from './device/device.module';
+import { BrewModule } from './brew/brew.module';
+import { MqttModule } from './mqtt/mqtt.module';
 
 @Module({
   imports: [
@@ -14,6 +16,8 @@ import { DeviceModule } from './device/device.module';
     TeaModule,
     AuthModule,
     DeviceModule,
+    BrewModule,
+    MqttModule,
   ],
 })
 export class ApiModule {}
