@@ -1,0 +1,16 @@
+model brew {
+    id  Int @id @default(autoincrement())
+    device_id Int
+    device device @relation(fields: [device_id], references: [id])
+    instruction_id Int
+    instruction brewing_instructions @relation(fields: [instruction_id], references: [id])
+    volume_ml Int
+    brew_number Int
+    start_time DateTime
+    end_time DateTime?
+    status String
+    created_at DateTime @default(now())
+    updated_at DateTime @updatedAt
+    @@index([device_id])
+    @@index([start_time])
+}

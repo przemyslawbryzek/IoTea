@@ -55,11 +55,35 @@ export class WorkerService implements OnModuleInit, OnModuleDestroy {
           this.logger.log('Subscribed to telemetry/+/temp');
         }
       });
+
+      this.mqttClient.subscribe('device/+/brew/ack', { qos: 1 }, (err) => {
+        if (err) {
+          this.logger.error(`Subscribe error: ${err.message}`);
+        } else {
+          this.logger.log('Subscribed to device/+/brew/ack');
+        }
+      });
+
+      this.mqttClient.subscribe('device/+/brew/end', { qos: 1 }, (err) => {
+        if (err) {
+          this.logger.error(`Subscribe error: ${err.message}`);
+        } else {
+          this.logger.log('Subscribed to device/+/brew/end');
+        }
+      });
     });
 
     this.mqttClient.on('message', (topic, payload) => {
       this._handleMessage(topic, payload).catch((err) => {
-        this.logger.error(`Error handling message on ${topic}: ${err.message}`);
+        const errorMsg = `Failed to process MQTT message on topic "${topic}": ${err.message}`;
+        console.error(
+          `\nMQTT ERROR\nTopic: ${topic}\nError: ${err.message}\nPayload: ${payload.toString()}\n`,
+        );
+        this.logger.error(errorMsg, {
+          topic,
+          payload: payload.toString(),
+          stack: err.stack,
+        });
       });
     });
 
@@ -88,6 +112,16 @@ export class WorkerService implements OnModuleInit, OnModuleDestroy {
 
     if (topic.match(/^telemetry\/(.+)\/temp$/)) {
       await this._handleTelemetry(data);
+      return;
+    }
+
+    if (topic.match(/^device\/(.+)\/brew\/ack$/)) {
+      await this._handleBrewAck(data);
+      return;
+    }
+
+    if (topic.match(/^device\/(.+)\/brew\/end$/)) {
+      await this._handleBrewEnd(data);
       return;
     }
   }
@@ -146,6 +180,72 @@ export class WorkerService implements OnModuleInit, OnModuleDestroy {
       JSON.stringify({ temperature, timestamp }),
       { EX: 300 },
     );
+  }
+
+  private async _handleBrewAck(data: {
+    device_id: string;
+    brew_id?: number;
+    status?: string;
+  }): Promise<void> {
+    const { device_id, brew_id, status } = data;
+
+    if (!device_id || !brew_id) {
+      this.logger.warn(`Invalid brew ack payload: ${JSON.stringify(data)}`);
+      return;
+    }
+
+    this.logger.log(
+      `Brew ACK received - Device: ${device_id}, Brew ID: ${brew_id}, Status: ${status || 'brewing'}`,
+    );
+
+    try {
+      await this.prisma.brew.update({
+        where: { id: brew_id },
+        data: {
+          status: status || 'brewing',
+        },
+      });
+
+      this.logger.log(
+        `Updated brew ${brew_id} status to "${status || 'brewing'}"`,
+      );
+    } catch (error) {
+      this.logger.error(`Failed to update brew ${brew_id}: ${error.message}`);
+    }
+  }
+
+  private async _handleBrewEnd(data: {
+    device_id: string;
+    brew_id: number;
+    status?: string;
+    timestamp?: number;
+  }): Promise<void> {
+    const { device_id, brew_id, status = 'completed', timestamp } = data;
+
+    if (!device_id || !brew_id) {
+      this.logger.warn(`Invalid brew end payload: ${JSON.stringify(data)}`);
+      return;
+    }
+
+    this.logger.log(
+      `Brew END received - Device: ${device_id}, Brew ID: ${brew_id}, Status: ${status}`,
+    );
+
+    try {
+      await this.prisma.brew.update({
+        where: { id: brew_id },
+        data: {
+          status: status,
+          end_time: timestamp ? new Date(timestamp * 1000) : new Date(),
+        },
+      });
+
+      this.logger.log(
+        `Updated brew ${brew_id} status to "${status}" with finish time`,
+      );
+    } catch (error) {
+      this.logger.error(`Failed to update brew end ${brew_id}: ${error.message}`);
+    }
   }
 
   onModuleDestroy() {

@@ -28,6 +28,9 @@ spec:
         app.kubernetes.io/component: broker
         app.kubernetes.io/part-of: iotea
     spec:
+      securityContext:
+        fsGroup: 1000
+        runAsNonRoot: false
       containers:
         - name: emqx
           image: emqx:5
@@ -38,6 +41,10 @@ spec:
               containerPort: 8083
             - name: dashboard
               containerPort: 18083
+            - name: ekka
+              containerPort: 4370
+            - name: cluster-rpc
+              containerPort: 5370
           env:
             - name: POD_NAME
               valueFrom:
@@ -50,11 +57,11 @@ spec:
             - name: EMQX_NODE__NAME
               value: emqx@$(POD_NAME).emqx-headless.$(POD_NAMESPACE).svc.cluster.local
             - name: EMQX_CLUSTER__DISCOVERY_STRATEGY
-              value: dns
-            - name: EMQX_CLUSTER__DNS__NAME
-              value: emqx-headless.$(POD_NAMESPACE).svc.cluster.local
-            - name: EMQX_CLUSTER__DNS__RECORD_TYPE
-              value: srv
+              value: static
+            - name: EMQX_CLUSTER__STATIC__SEEDS
+              value: "emqx@emqx-0.emqx-headless.iotea.svc.cluster.local,emqx@emqx-1.emqx-headless.iotea.svc.cluster.local"
+            - name: EMQX_RPC__PORT_DISCOVERY
+              value: "stateless"
             - name: EMQX_NODE__COOKIE
               valueFrom:
                 secretKeyRef:
@@ -84,6 +91,13 @@ spec:
             - name: EMQX_AUTHENTICATION__1__PASSWORD_HASH_ALGORITHM__NAME
               value: "sha256"
 
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "1Gi"
+              cpu: "500m"
           volumeMounts:
             - name: emqx-data
               mountPath: /opt/emqx/data
@@ -94,13 +108,17 @@ spec:
           readinessProbe:
             tcpSocket:
               port: mqtt
-            initialDelaySeconds: 10
-            periodSeconds: 5
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 5
           livenessProbe:
             tcpSocket:
               port: mqtt
-            initialDelaySeconds: 30
-            periodSeconds: 10
+            initialDelaySeconds: 90
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
 
       volumes:
         - name: bootstrap-api-key

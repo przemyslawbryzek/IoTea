@@ -11,6 +11,7 @@ model device {
     last_seen DateTime?
     created_at DateTime @default(now())
     updated_at DateTime @updatedAt
+    brews brew[]
     @@index([owner_id])
     @@index([last_seen])
 }

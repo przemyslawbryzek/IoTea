@@ -29,4 +29,5 @@ model brewing_instructions{
     first_infusion_seconds Int
     increment_seconds Int
     max_infusions Int
+    brew brew[]
 }

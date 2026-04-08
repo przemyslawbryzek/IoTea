@@ -6,6 +6,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { DeviceOwnerGuard } from '../auth/guards/device-owner.guard';
 import { User } from '../auth/decorators/user.decorator';
 import { DeviceService } from './device.service';
 import { ApiBearerAuth } from '@nestjs/swagger';
@@ -22,11 +23,13 @@ export class DeviceController {
   }
 
   @Get(':id')
+  @UseGuards(DeviceOwnerGuard)
   getOne(@User() user: { id: number }, @Param('id', ParseIntPipe) id: number) {
     return this.deviceService.getOne(user.id, id);
   }
 
   @Get(':id/status')
+  @UseGuards(DeviceOwnerGuard)
   getStatus(
     @User() user: { id: number },
     @Param('id', ParseIntPipe) id: number,
