@@ -102,17 +102,48 @@ class BLEServer:
 
             if message.startswith("CONFIG:"):
                 try:
-                    self.config_data = json.loads(message[7:].strip())
+                    # CRITICAL FIX: Check bounds before slicing
+                    if len(message) < 7:
+                        logger.error(f"BLE message too short: '{message}' (len={len(message)})")
+                        return
+                        
+                    config_str = message[7:].strip()
+                    if not config_str:
+                        logger.error("Empty config payload after 'CONFIG:' prefix")
+                        return
+                        
+                    config_data = json.loads(config_str)
+                    
+                    # CRITICAL FIX: Validate required fields
+                    required_fields = ['device_id', 'wifi_ssid', 'wifi_password', 'mqtt_broker', 'mqtt_username', 'mqtt_password']
+                    missing_fields = [f for f in required_fields if f not in config_data]
+                    if missing_fields:
+                        logger.error(f"BLE config missing required fields: {missing_fields}")
+                        return
+                    
+                    # Validate field types
+                    if not all(isinstance(config_data[f], str) for f in required_fields):
+                        logger.error("BLE config fields must be strings")
+                        return
+                    
+                    # Validate field lengths
+                    if len(config_data['device_id']) == 0 or len(config_data['device_id']) > 50:
+                        logger.error(f"Invalid device_id length: {len(config_data['device_id'])}")
+                        return
+                    
+                    self.config_data = config_data
                     logger.info(f"Config saved, device_id={self.config_data.get('device_id')}")
 
                     status_char = self.server.get_characteristic(STATUS_CHAR_UUID)
                     if status_char:
                         status_char.value = bytearray(b'OK')
                         self.server.update_value(SERVICE_UUID, STATUS_CHAR_UUID)
-                except json.JSONDecodeError:
-                    logger.error("Invalid JSON in BLE config payload")
+                except json.JSONDecodeError as e:
+                    logger.error(f"Invalid JSON in BLE config payload: {e}")
+        except UnicodeDecodeError:
+            logger.error("BLE message is not valid UTF-8")
         except Exception as e:
-            logger.error(f"BLE write_request error: {e}")
+            logger.error(f"BLE write_request error: {e}", exc_info=True)
 
     def _read_request(self, characteristic: BlessGATTCharacteristic, **kwargs):
         return characteristic.value

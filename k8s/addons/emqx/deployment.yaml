@@ -8,7 +8,7 @@ metadata:
     app.kubernetes.io/part-of: iotea
 spec:
   serviceName: emqx-headless
-  replicas: 2
+  replicas: 1
   podManagementPolicy: Parallel
   selector:
     matchLabels:
@@ -28,6 +28,7 @@ spec:
         app.kubernetes.io/component: broker
         app.kubernetes.io/part-of: iotea
     spec:
+      serviceAccountName: emqx
       securityContext:
         fsGroup: 1000
         runAsNonRoot: false
@@ -57,9 +58,15 @@ spec:
             - name: EMQX_NODE__NAME
               value: emqx@$(POD_NAME).emqx-headless.$(POD_NAMESPACE).svc.cluster.local
             - name: EMQX_CLUSTER__DISCOVERY_STRATEGY
-              value: static
-            - name: EMQX_CLUSTER__STATIC__SEEDS
-              value: "emqx@emqx-0.emqx-headless.iotea.svc.cluster.local,emqx@emqx-1.emqx-headless.iotea.svc.cluster.local"
+              value: k8s
+            - name: EMQX_CLUSTER__K8S__SERVICE_NAME
+              value: emqx-headless
+            - name: EMQX_CLUSTER__K8S__NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: EMQX_CLUSTER__K8S__ADDRESS_TYPE
+              value: dns
             - name: EMQX_RPC__PORT_DISCOVERY
               value: "stateless"
             - name: EMQX_NODE__COOKIE

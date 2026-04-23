@@ -1,6 +1,7 @@
 import json
 import logging
 import time
+import threading
 from typing import Optional, Dict, List
 import paho.mqtt.client as mqtt
 
@@ -19,26 +20,31 @@ class MQTTClient:
             self.port = port
         self.device_id = device_id
         self.connected = False
+        self._connected_lock = threading.Lock()
         self.client = mqtt.Client()
         self.client.username_pw_set(username, password)
         self.client.on_connect = self._on_connect
         self.client.on_message = self._on_message
         self._commands = []
+        self._commands_lock = threading.Lock()
     
     def _on_connect(self, client, userdata, flags, rc):
         if rc == 0:
             logger.info(f"MQTT connected")
-            self.connected = True
+            with self._connected_lock:
+                self.connected = True
             self.client.subscribe(f"cmd/{self.device_id}/#")
         else:
             logger.error(f"MQTT connection failed: {rc}")
-            self.connected = False
+            with self._connected_lock:
+                self.connected = False
     
     def _on_message(self, client, userdata, msg):
         try:
             payload = json.loads(msg.payload)
             logger.info(f"Command: {payload}")
-            self._commands.append(payload)
+            with self._commands_lock:
+                self._commands.append(payload)
         except Exception as e:
             logger.error(f"Error parsing command: {e}")
     
@@ -58,11 +64,31 @@ class MQTTClient:
     def disconnect(self):
         self.client.loop_stop()
         self.client.disconnect()
-        self.connected = False
+        with self._connected_lock:
+            self.connected = False
         logger.info("MQTT disconnected")
     
+    def reconnect(self, max_retries: int = 5) -> bool:
+        """CRITICAL FIX: Reconnect with retry mechanism instead of permanent disconnection"""
+        for attempt in range(1, max_retries + 1):
+            try:
+                logger.info(f"MQTT reconnection attempt {attempt}/{max_retries}...")
+                if self.client.reconnect() == 0:
+                    logger.info(f"MQTT reconnected successfully on attempt {attempt}")
+                    if not hasattr(self, '_loop_running') or not self._loop_running:
+                        self.client.loop_start()
+                    return True
+            except Exception as e:
+                logger.warning(f"MQTT reconnect attempt {attempt} failed: {e}")
+                if attempt < max_retries:
+                    time.sleep(2 ** attempt)  # Exponential backoff: 2s, 4s, 8s, 16s, 32s
+        
+        logger.error(f"MQTT reconnection failed after {max_retries} attempts")
+        return False
+    
     def is_connected(self) -> bool:
-        return self.connected
+        with self._connected_lock:
+            return self.connected
     
     def publish_telemetry(self, temp: float):
         if not self.connected:
@@ -91,8 +117,10 @@ class MQTTClient:
         return True
     
     def get_commands(self) -> List[Dict]:
-        cmds = self._commands.copy()
-        self._commands.clear()
+        """Thread-safe retrieval of pending commands"""
+        with self._commands_lock:
+            cmds = self._commands.copy()
+            self._commands.clear()
         return cmds
     
     def publish_command_ack(self, command_id: str, result: str):
@@ -138,5 +166,4 @@ class MQTTClient:
         self.client.publish(f"device/{self.device_id}/brew/end", 
                            json.dumps(payload), qos=1)
         logger.info(f"Published brew end: brew_id={brew_id}")
-        return True
         return True
