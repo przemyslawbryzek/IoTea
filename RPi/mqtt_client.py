@@ -69,7 +69,6 @@ class MQTTClient:
         logger.info("MQTT disconnected")
     
     def reconnect(self, max_retries: int = 5) -> bool:
-        """CRITICAL FIX: Reconnect with retry mechanism instead of permanent disconnection"""
         for attempt in range(1, max_retries + 1):
             try:
                 logger.info(f"MQTT reconnection attempt {attempt}/{max_retries}...")
@@ -81,7 +80,7 @@ class MQTTClient:
             except Exception as e:
                 logger.warning(f"MQTT reconnect attempt {attempt} failed: {e}")
                 if attempt < max_retries:
-                    time.sleep(2 ** attempt)  # Exponential backoff: 2s, 4s, 8s, 16s, 32s
+                    time.sleep(2 ** attempt)
         
         logger.error(f"MQTT reconnection failed after {max_retries} attempts")
         return False

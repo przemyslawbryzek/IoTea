@@ -183,7 +183,7 @@ class BLEService {
       console.log(`[API] Registered: id=${registration.id}, broker=${registration.mqtt_broker}`);
 
       const config: DeviceConfig = {
-        device_id: registration.id,
+        device_id: String(registration.id),
         wifi_ssid: wifiSsid,
         wifi_password: wifiPassword,
         mqtt_broker: registration.mqtt_broker,

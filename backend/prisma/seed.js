@@ -113,18 +113,48 @@ async function main() {
     'TRUNCATE TABLE "brewing_instructions", "Tea", "brewing_style", "tea_category" RESTART IDENTITY CASCADE',
   );
 
+  const iconColumnCheck = await prisma.$queryRawUnsafe(
+    `
+      SELECT EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'tea_category'
+          AND column_name = 'icon_url'
+      ) AS "exists"
+    `,
+  );
+  const hasCategoryIconColumn = Boolean(iconColumnCheck?.[0]?.exists);
+
+  const categorySeeds = [
+    { name: 'White', icon_url: 'https://img.icons8.com/?size=100&id=rCUgZeMLbaAM&format=png&color=C8A96A' },
+    { name: 'Yellow', icon_url: 'https://img.icons8.com/?size=100&id=rCUgZeMLbaAM&format=png&color=E8B233' },
+    { name: 'Raw Puerh', icon_url: 'https://img.icons8.com/?size=100&id=rCUgZeMLbaAM&format=png&color=8A4B2A' },
+    { name: 'Green', icon_url: 'https://img.icons8.com/?size=100&id=rCUgZeMLbaAM&format=png&color=4D8B31' },
+    { name: 'Oolong', icon_url: 'https://img.icons8.com/?size=100&id=rCUgZeMLbaAM&format=png&color=C9792B' },
+    { name: 'Ripened', icon_url: 'https://img.icons8.com/?size=100&id=rCUgZeMLbaAM&format=png&color=6B3F2A' },
+    { name: 'Matcha', icon_url: 'https://img.icons8.com/?size=100&id=rCUgZeMLbaAM&format=png&color=5FA641' },
+    { name: 'Black', icon_url: 'https://img.icons8.com/?size=100&id=rCUgZeMLbaAM&format=png&color=2F2A25' },
+    { name: 'Tisanes', icon_url: 'https://img.icons8.com/?size=100&id=rCUgZeMLbaAM&format=png&color=B85E7A' },
+  ];
+
   // 1. Create categories
-  const categories = await Promise.all([
-    prisma.tea_category.create({ data: { name: 'White' } }),
-    prisma.tea_category.create({ data: { name: 'Yellow' } }),
-    prisma.tea_category.create({ data: { name: 'Raw Puerh' } }),
-    prisma.tea_category.create({ data: { name: 'Green' } }),
-    prisma.tea_category.create({ data: { name: 'Oolong' } }),
-    prisma.tea_category.create({ data: { name: 'Ripened' } }),
-    prisma.tea_category.create({ data: { name: 'Matcha' } }),
-    prisma.tea_category.create({ data: { name: 'Black' } }),
-    prisma.tea_category.create({ data: { name: 'Tisanes' } }),
-  ]);
+  let categories;
+  if (hasCategoryIconColumn) {
+    categories = await Promise.all(
+      categorySeeds.map((category) => prisma.tea_category.create({ data: category })),
+    );
+  } else {
+    for (const category of categorySeeds) {
+      await prisma.$executeRawUnsafe(
+        `INSERT INTO "tea_category" ("name") VALUES ('${category.name.replace(/'/g, "''")}')`,
+      );
+    }
+
+    categories = await prisma.$queryRawUnsafe(
+      'SELECT "id", "name" FROM "tea_category" ORDER BY "id" ASC',
+    );
+  }
 
   const [whiteCategory, yellowCategory, rawPuerhCategory, greenCategory, oolongCategory, ripenedCategory, matchaCategory, blackCategory, tisanesCategory] = categories;
 

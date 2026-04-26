@@ -26,15 +26,12 @@ class MenuManager:
         self._last_brew = None
         self._can_continue_brew = False
         
-        # Manual brew state
         self._manual_brew_mode = None
         self._manual_brew_params = {}
         
-        # Config view state
         self._viewing_config = False
-        self._viewing_config_time = 0  # Timestamp when config view started
+        self._viewing_config_time = 0
         
-        # Start input listener thread
         self._input_thread = threading.Thread(target=self._input_listener, daemon=True)
         self._input_thread.start()
 
@@ -55,7 +52,6 @@ class MenuManager:
                 logger.debug(f"Input listener error: {e}")
 
     def _handle_input(self, user_input):
-        # Handle manual brew parameter input
         if self._manual_brew_mode:
             if user_input == 'LEFT':
                 if self._manual_brew_mode == 'volume':
@@ -81,24 +77,22 @@ class MenuManager:
                     self._manual_brew_mode = 'duration'
                     self._update_manual_brew_display()
                 elif self._manual_brew_mode == 'duration':
-                    # Start manual brew
                     self._start_manual_brew()
                     self._manual_brew_mode = None
                     self.open_main_menu()
             return
 
-        # Normal menu navigation
         if user_input == 'LEFT':
             if self._menu_items:
                 if self._menu_index == 0:
-                    self._menu_index = len(self._menu_items) - 1  # Wrap to end
+                    self._menu_index = len(self._menu_items) - 1
                 else:
                     self._menu_index -= 1
             logger.debug(f"LEFT pressed - menu index: {self._menu_index}")
         elif user_input == 'RIGHT':
             if self._menu_items:
                 if self._menu_index == len(self._menu_items) - 1:
-                    self._menu_index = 0  # Wrap to start
+                    self._menu_index = 0
                 else:
                     self._menu_index += 1
             logger.debug(f"RIGHT pressed - menu index: {self._menu_index}")
@@ -129,13 +123,10 @@ class MenuManager:
                     self._start_brew_with_selection(self._selected_tea, style)
                     self.open_main_menu()
             elif self._viewing_config:
-                # Debounce - only exit config view after at least 1 second
-                if time.time() - self._viewing_config_time >= 1.0:
-                    logger.info("Any input while viewing config - returning to settings")
-                    self._viewing_config = False
-                    self._load_settings_menu()
-                else:
-                    logger.debug("Ignoring input - debouncing config view exit")
+                logger.info("ACK while viewing config - returning to main menu")
+                self._viewing_config = False
+                self.screen_manager.clear_custom_message()
+                self.open_main_menu()
             elif self._menu_mode == 'settings' and self._menu_items:
                 selected_item = self._menu_items[self._menu_index]
                 if selected_item.get('is_back'):
@@ -183,7 +174,6 @@ class MenuManager:
                 result = self.brew_manager.start_local_brew(tea, style)
                 if result:
                     self.screen_manager.set_brewing(True, 0)
-                    # Track last brew info
                     self._last_brew = {
                         'tea_id': tea['id'],
                         'tea_name': tea['name'],
@@ -212,15 +202,12 @@ class MenuManager:
                 logger.warning("Cannot continue - max infusions reached")
                 return False
             
-            # CRITICAL FIX: Check if first_infusion_seconds exists
             if 'first_infusion_seconds' not in brew:
                 logger.error(f"Invalid brew data: missing first_infusion_seconds")
                 return False
             
-            # Calculate brew time
             duration = brew['first_infusion_seconds'] if next_brew_number == 1 else brew['first_infusion_seconds'] + (brew['increment_seconds'] * (next_brew_number - 1))
             
-            # Start local brew with incremented number
             style = {
                 'id': self._last_brew.get('instructions_id'),
                 'style': f"{brew['style']} #{next_brew_number}",
@@ -274,18 +261,16 @@ class MenuManager:
                 logger.error("Brew manager not initialized")
                 return False
             
-            vol = self._manual_brew_params.get('volume_ml', 0)
+            vol = self._manual_brew_params.get('volume_ml', 200)
             temp = self._manual_brew_params.get('temperature_c', 75)
-            duration = self._manual_brew_params.get('duration_seconds', 300)
+            duration = self._manual_brew_params.get('duration_seconds', 60)
             
-            # Validate parameters
             if not (0 <= vol <= 1000) or not (40 <= temp <= 100) or not (30 <= duration <= 3600):
                 logger.error(f"Invalid manual brew params: {vol}ml @ {temp}°C for {duration}s")
                 return False
             
             logger.info(f"Starting manual brew: {vol}ml @ {temp}°C for {duration}s")
             
-            # Create a simple brew dict
             tea = {'id': 0, 'name': 'Manual Brew'}
             style = {
                 'id': 0,
@@ -299,7 +284,6 @@ class MenuManager:
             result = self.brew_manager.start_local_brew(tea, style)
             if result:
                 self.screen_manager.set_brewing(True, 0)
-                # CRITICAL FIX: Include first_infusion_seconds in _last_brew dict
                 self._last_brew = {
                     'tea_id': 0,
                     'tea_name': 'Manual',
@@ -307,7 +291,7 @@ class MenuManager:
                     'brew_number': 1,
                     'max_infusions': 1,
                     'increment_seconds': 0,
-                    'first_infusion_seconds': duration  # CRITICAL: Was missing!
+                    'first_infusion_seconds': duration
                 }
                 self._check_can_continue_brew()
                 logger.info("Manual brew started successfully")
@@ -346,13 +330,11 @@ class MenuManager:
             self._load_teas_for_menu()
         elif action == 'manual_brew':
             logger.info("Starting manual brew - entering parameters")
-            # MUST clear menu_mode first to prevent race condition
             self._menu_mode = None
-            # Clear screen_manager menu display too! (use thread-safe method)
             with self.screen_manager.lock:
                 self.screen_manager.menu_mode = None
             self._manual_brew_mode = 'volume'
-            self._manual_brew_params = {'volume_ml': 0, 'temperature_c': 75, 'duration_seconds': 300}
+            self._manual_brew_params = {'volume_ml': 200, 'temperature_c': 75, 'duration_seconds': 60}
             logger.info(f"Manual brew mode set to: {self._manual_brew_mode}")
             self._update_manual_brew_display()
             logger.info(f"Custom message set, manual_brew_mode: {self._manual_brew_mode}")
@@ -418,16 +400,13 @@ class MenuManager:
             self.open_main_menu()
     
     def _get_device_ip(self):
-        """Get device IP address"""
         try:
-            # Create socket to determine which interface connects to external network
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             sock.connect(("8.8.8.8", 80))
             ip = sock.getsockname()[0]
             sock.close()
             return ip
         except Exception:
-            # Fallback to localhost if unable to determine IP
             return "localhost"
     
     def _show_config_info(self):
@@ -437,14 +416,11 @@ class MenuManager:
             device_id = self.config_manager.get_config('device_id', 'Not configured')
             
             config_text = f"Device Info\nIP: {device_ip}\nID: {device_id}"
-            
-            # Set custom message - it will have rendering priority over menu
             self.screen_manager.set_custom_message(config_text)
             self._viewing_config = True
-            self._viewing_config_time = time.time()  # Record when config view started
             logger.info(f"Displaying config: IP={device_ip}, ID={device_id}")
         except Exception as e:
             logger.error(f"Error retrieving config: {e}")
-            self.screen_manager.set_custom_message("Error loading config")
             self._viewing_config = True
-            self._viewing_config_time = time.time()
+            self.screen_manager.set_custom_message("Error loading config")
+            

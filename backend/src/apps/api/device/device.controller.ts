@@ -1,5 +1,6 @@
 import {
   Controller,
+  Delete,
   Get,
   Param,
   ParseIntPipe,
@@ -35,5 +36,11 @@ export class DeviceController {
     @Param('id', ParseIntPipe) id: number,
   ) {
     return this.deviceService.getStatus(user.id, id);
+  }
+
+  @Delete(':id')
+  @UseGuards(DeviceOwnerGuard)
+  remove(@User() user: { id: number }, @Param('id', ParseIntPipe) id: number) {
+    return this.deviceService.remove(user.id, id);
   }
 }

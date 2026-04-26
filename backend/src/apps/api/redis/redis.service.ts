@@ -97,4 +97,16 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
 
     return fresh;
   }
+
+  async deleteKey(key: string): Promise<void> {
+    if (!this.client || !this.available || !this.client.isOpen) {
+      return;
+    }
+
+    try {
+      await this.getClient().del(key);
+    } catch {
+      this.logger.warn(`Failed to delete cache for key: ${key}`);
+    }
+  }
 }
