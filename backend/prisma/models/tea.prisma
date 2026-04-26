@@ -1,7 +1,9 @@
 model tea_category {
     id  Int @id @default(autoincrement())
     name String
+    icon_url String?
     teas Tea[]
+    user_teas user_tea[]
 }
 model Tea {
     id  Int @id @default(autoincrement())
@@ -11,8 +13,27 @@ model Tea {
     categoryId Int
     category tea_category @relation(fields: [categoryId], references: [id])
     brew_temp Int
-    instructions brewing_instructions[]
+    instructions brewing_instructions[] @relation("TeaInstructions")
 }
+
+model user_tea {
+    id Int @id @default(autoincrement())
+    owner_id Int
+    owner user @relation(fields: [owner_id], references: [id], onDelete: Cascade)
+    name String
+    description String?
+    image_url String?
+    categoryId Int
+    category tea_category @relation(fields: [categoryId], references: [id])
+    brew_temp Int
+    instructions brewing_instructions[] @relation("UserTeaInstructions")
+    created_at DateTime @default(now())
+    updated_at DateTime @updatedAt
+
+    @@index([owner_id])
+    @@index([categoryId])
+}
+
 model brewing_style{
     id  Int @id @default(autoincrement())
     name String
@@ -21,13 +42,22 @@ model brewing_style{
 }
 model brewing_instructions{
     id  Int @id @default(autoincrement())
-    teaId Int
+    teaId Int?
+    userTeaId Int?
     styleId Int
-    tea Tea @relation(fields: [teaId], references: [id])
+    tea Tea? @relation("TeaInstructions", fields: [teaId], references: [id], onDelete: Cascade)
+    userTea user_tea? @relation("UserTeaInstructions", fields: [userTeaId], references: [id], onDelete: Cascade)
     style brewing_style @relation(fields: [styleId], references: [id])
     grams_per_100ml Decimal
     first_infusion_seconds Int
     increment_seconds Int
     max_infusions Int
     brew brew[]
+
+    created_at DateTime @default(now())
+    updated_at DateTime @updatedAt
+
+    @@index([teaId])
+    @@index([userTeaId])
+    @@index([styleId])
 }

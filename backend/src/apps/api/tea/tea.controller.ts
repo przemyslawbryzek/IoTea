@@ -1,29 +1,24 @@
 import {
-  Body,
   Controller,
-  Delete,
   Get,
   Param,
   ParseIntPipe,
-  Post,
-  Put,
+  UseGuards,
 } from '@nestjs/common';
+import { ApiBearerAuth } from '@nestjs/swagger';
 import { TeaService } from './tea.service';
-import { CreateTeaDto } from './dto/create-tea.dto';
-import { UpdateTeaDto } from './dto/update-tea.dto';
+import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard';
+import { User } from '../auth/decorators/user.decorator';
 
 @Controller('tea')
 export class TeaController {
   constructor(private readonly teaService: TeaService) {}
 
-  @Post()
-  createTea(@Body() body: CreateTeaDto) {
-    return this.teaService.createTea(body);
-  }
-
+  @ApiBearerAuth()
+  @UseGuards(OptionalJwtAuthGuard)
   @Get()
-  getTea() {
-    return this.teaService.getTea();
+  getTea(@User('id') userId?: number) {
+    return this.teaService.getTea(userId);
   }
 
   @Get('category')
@@ -31,26 +26,23 @@ export class TeaController {
     return this.teaService.getCategory();
   }
 
+  @ApiBearerAuth()
+  @UseGuards(OptionalJwtAuthGuard)
   @Get('category/:id')
-  getTeaByCategory(@Param('id', ParseIntPipe) id: number) {
-    return this.teaService.getTeaByCategory(id);
-  }
-
-  @Get(':id')
-  getTeaById(@Param('id', ParseIntPipe) id: number) {
-    return this.teaService.getTeaById(id);
-  }
-
-  @Put(':id')
-  updateTea(
+  getTeaByCategory(
     @Param('id', ParseIntPipe) id: number,
-    @Body() body: UpdateTeaDto,
+    @User('id') userId?: number,
   ) {
-    return this.teaService.updateTea(id, body);
+    return this.teaService.getTeaByCategory(id, userId);
   }
 
-  @Delete(':id')
-  deleteTea(@Param('id', ParseIntPipe) id: number) {
-    return this.teaService.deleteTea(id);
+  @ApiBearerAuth()
+  @UseGuards(OptionalJwtAuthGuard)
+  @Get(':id')
+  getTeaById(
+    @Param('id', ParseIntPipe) id: number,
+    @User('id') userId?: number,
+  ) {
+    return this.teaService.getTeaById(id, userId);
   }
 }

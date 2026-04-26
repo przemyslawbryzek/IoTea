@@ -14,6 +14,7 @@ from brew import BrewManager
 from screen_manager import ScreenManager, ScreenState
 from menus import MenuManager
 from encoder import EncoderController
+from DS18B20 import DS18B20Sensor
 
 logging.basicConfig(
     level=logging.INFO,
@@ -42,6 +43,8 @@ class NullMQTTClient:
         return []
 
     def publish_status(self, status: str):
+        return False
+    def publish_telemetry(self, temperature: float):
         return False
 
     def publish_command_ack(self, command_id: str, result: str):
@@ -74,7 +77,8 @@ class TeaDevice:
         self.mqtt_client = NullMQTTClient()
         self.ble_server = None
         self.brew_manager = None
-        self.screen_manager = ScreenManager()
+        self.temperature_sensor = DS18B20Sensor()
+        self.screen_manager = ScreenManager(self.temperature_sensor)
         self.menu_manager = None
         self.encoder_controller = None
         self.running = True
@@ -140,12 +144,8 @@ class TeaDevice:
         
         if self.state in loading_states:
             screen_state = ScreenState.STARTUP
-        elif self.state == DeviceState.OFFLINE_MODE:
-            screen_state = ScreenState.OFFLINE_MODE
         elif self.state == DeviceState.BLE_PAIRING:
             screen_state = ScreenState.BLE_PAIRING
-        elif self.state == DeviceState.OPERATIONAL:
-            screen_state = ScreenState.OPERATIONAL
         else:
             screen_state = ScreenState.STARTUP
         
@@ -242,22 +242,6 @@ class TeaDevice:
                 self.brew_manager = BrewManager(self.mqtt_client, self.config_manager, self.screen_manager)
             else:
                 self.brew_manager.mqtt_client = self.mqtt_client
-
-            if not self.encoder_controller:
-                self.encoder_controller = EncoderController()
-                self.encoder_controller.start()
-
-            if not self.menu_manager:
-                self.menu_manager = MenuManager(
-                    self.config_manager,
-                    self.brew_manager,
-                    self.screen_manager,
-                    input_provider=self.encoder_controller,
-                    on_ble_pairing=self._start_ble_pairing_mode,
-                )
-            else:
-                self.menu_manager.brew_manager = self.brew_manager
-                self.menu_manager.screen_manager = self.screen_manager
             self.state = DeviceState.OPERATIONAL
         else:
             logger.error("MQTT connection failed")
@@ -272,10 +256,26 @@ class TeaDevice:
             self.state = DeviceState.RECONNECTING
             self._update_screen_state()
             return
+        if not self.encoder_controller:
+            self.encoder_controller = EncoderController()
+            self.encoder_controller.start()
+
+        if not self.menu_manager:
+            self.menu_manager = MenuManager(
+                self.config_manager,
+                self.brew_manager,
+                self.screen_manager,
+                input_provider=self.encoder_controller,
+                on_ble_pairing=self._start_ble_pairing_mode,
+            )
+        else:
+            self.menu_manager.brew_manager = self.brew_manager
+            self.menu_manager.screen_manager = self.screen_manager
 
         now = time.time()
         if now - self._last_status_publish >= self._status_interval:
             self.mqtt_client.publish_status('online')
+            self.mqtt_client.publish_telemetry(self.temperature_sensor.get_temperature())
             self._last_status_publish = now
             logger.debug("Status published: online")
 
@@ -302,7 +302,6 @@ class TeaDevice:
             self.screen_manager.set_brewing(False)
             if self.menu_manager:
                 menu_state = self.menu_manager.get_menu_state()
-                # Only open main menu if not in manual brew mode
                 if not menu_state['menu_mode'] and not self.menu_manager.is_manual_brew_active():
                     self.menu_manager.open_main_menu()
                 else:
@@ -322,28 +321,6 @@ class TeaDevice:
             self._enter_local_operation("Reconnection failed")
             return
         self._update_screen_state()
-
-    def _input_listener(self):
-        """[DEPRECATED - moved to MenuManager]"""
-        pass
-
-
-
-
-
-
-    
-
-    
-
-
-
-
-
-
-
-
-
 
     def _execute_command(self, command):
         cmd_type = command.get('type')
@@ -417,9 +394,6 @@ class TeaDevice:
         self.state = DeviceState.BLE_PAIRING
         self._update_screen_state()
 
-    def _on_reset_config(self):
-        """Backward-compatible alias for BLE pairing from settings"""
-        self._start_ble_pairing_mode()
 
     def shutdown(self, signum, frame):
         logger.info("Shutting down...")

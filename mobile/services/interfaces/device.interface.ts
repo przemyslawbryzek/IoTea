@@ -19,7 +19,7 @@ export interface BleDevice {
 }
 
 export interface DeviceConfig {
-  device_id: number;
+  device_id: string;
   wifi_ssid: string;
   wifi_password: string;
   mqtt_broker: string;

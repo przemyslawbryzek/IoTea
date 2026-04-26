@@ -61,6 +61,13 @@ export class MqttService implements OnModuleInit, OnModuleDestroy {
     if (!instruction) {
       throw new Error(`Instruction ${brewData.instructionId} not found`);
     }
+
+    const brewTemperatureCelsius =
+      instruction.tea?.brew_temp ?? instruction.userTea?.brew_temp;
+
+    if (brewTemperatureCelsius === undefined || brewTemperatureCelsius === null) {
+      throw new Error(`Instruction ${brewData.instructionId} has no brew temperature source`);
+    }
     const totalBrewSeconds =
       instruction.first_infusion_seconds +
       instruction.increment_seconds * (instruction.max_infusions - 1);
@@ -71,7 +78,7 @@ export class MqttService implements OnModuleInit, OnModuleDestroy {
       brewId: brewData.brewId,
       brewNumber: brewData.brewNumber,
       volumeMl: brewData.volumeMl,
-      brewTemperatureCelsius: instruction.tea.brew_temp,
+      brewTemperatureCelsius,
       totalBrewSeconds,
       timestamp: Date.now(),
     };

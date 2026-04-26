@@ -7,6 +7,7 @@ model user {
   created_at    DateTime         @default(now())
   updated_at    DateTime         @updatedAt
   devices      device[]
+  user_teas    user_tea[]
 }
 
 enum role {

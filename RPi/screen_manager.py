@@ -18,17 +18,13 @@ logger = logging.getLogger(__name__)
 
 class ScreenState(Enum):
     STARTUP = "startup"
-    OFFLINE_MODE = "offline_mode"
-    BLE_PAIRING = "ble_pairing"
-    CONNECTING_WIFI = "connecting_wifi"
-    CONNECTING_MQTT = "connecting_mqtt"
-    OPERATIONAL = "operational"
     BREWING = "brewing"
     ERROR = "error"
+    BLE_PAIRING = "ble_pairing"
 
 
 class ScreenManager:    
-    def __init__(self):
+    def __init__(self, temperature_sensor=None):
         self.display = None
         self.current_state = ScreenState.STARTUP
         self.running = False
@@ -46,6 +42,7 @@ class ScreenManager:
         self.menu_mode = None
         self.menu_items = []
         self.menu_index = 0
+        self.temperature_sensor = temperature_sensor
         
         self.font_small = None
         self.font_medium = None
@@ -68,9 +65,9 @@ class ScreenManager:
         try:
             font_path = os.path.join(picdir, 'Font.ttc')
             if os.path.exists(font_path):
-                self.font_small = ImageFont.truetype(font_path, 12)
-                self.font_medium = ImageFont.truetype(font_path, 16)
-                self.font_large = ImageFont.truetype(font_path, 20)
+                self.font_small = ImageFont.truetype(font_path, 10)
+                self.font_medium = ImageFont.truetype(font_path, 12)
+                self.font_large = ImageFont.truetype(font_path, 14)
             else:
                 logger.warning(f"Font file not found at {font_path}, using default font")
                 self.font_small = ImageFont.load_default()
@@ -135,6 +132,9 @@ class ScreenManager:
     def set_custom_message(self, message: str):
         with self.lock:
             self.custom_message = message
+    def clear_custom_message(self):
+        with self.lock:
+            self.custom_message = None
     
     def set_menu(self, menu_mode: str, items: list, current_index: int = 0):
         """Set menu display (tea_selection or style_selection)"""
@@ -179,71 +179,27 @@ class ScreenManager:
             if brewing:
                 self._draw_brewing(draw, progress)
             elif message:
-                # Custom message has priority - show it regardless of state
-                self._draw_operational(draw, device_id, signal, mqtt, message)
+                self._draw_operational(draw, device_id, signal, mqtt, custom_message=message)
+            elif state == ScreenState.BLE_PAIRING:
+                self._draw_ble_pairing(draw)
             elif menu_mode:
                 self._draw_menu(draw, menu_mode, menu_items, menu_index, signal, mqtt)
             elif state == ScreenState.STARTUP:
                 self._draw_startup(draw)
-            elif state == ScreenState.OFFLINE_MODE:
-                self._draw_offline(draw, device_id)
-            elif state == ScreenState.BLE_PAIRING:
-                self._draw_ble_pairing(draw)
-            elif state == ScreenState.CONNECTING_WIFI:
-                self._draw_connecting_wifi(draw)
-            elif state == ScreenState.CONNECTING_MQTT:
-                self._draw_connecting_mqtt(draw)
-            elif state == ScreenState.OPERATIONAL:
-                self._draw_operational(draw, device_id, signal, mqtt, message)
             elif state == ScreenState.ERROR:
-                self._draw_error(draw, error)
-            
+                self._draw_error(draw, error)     
             self.display.ShowImage(self.display.getbuffer(image))
             
         except Exception as e:
             logger.error(f"Error rendering screen: {e}")
     
     def _draw_startup(self, draw):
-        draw.text((25, 15), "IoT Tea", font=self.font_large, fill=0)
-        draw.text((10, 40), "Starting...", font=self.font_medium, fill=0)
-        time_val = int(time.time()) % 3
+        draw.text((25, 15), "IoTea", font=self.font_large, fill=0)
+        draw.text((10, 40), "Starting", font=self.font_medium, fill=0)
+        time_val = int(time.time()) % 4
         draw.text((75, 40), "." * time_val, font=self.font_medium, fill=0)
-    
-    def _draw_offline(self, draw, device_id):
-        draw.text((10, 5), "NO CONNECTION", font=self.font_medium, fill=0)
-        draw.rectangle([(0, 20), (128, 21)], fill=0)
-        draw.text((10, 25), "Brewing still works", font=self.font_small, fill=0)
-        device_id_str = str(device_id) if device_id else '?'
-        draw.text((10, 37), f"ID: {device_id_str[:12]}", 
-                 font=self.font_small, fill=0)
-        draw.text((10, 49), "BLE in settings", font=self.font_small, fill=0)
-    
-    def _draw_ble_pairing(self, draw):
-        draw.text((18, 5), "BLE SERVER", font=self.font_medium, fill=0)
-        draw.rectangle([(0, 20), (128, 21)], fill=0)
-        draw.text((10, 25), "Start from", font=self.font_small, fill=0)
-        draw.text((10, 35), "settings only", font=self.font_small, fill=0)
-        time_val = int(time.time()) % 3
-        draw.text((50, 50), "." * time_val, font=self.font_large, fill=0)
-    
-    def _draw_connecting_wifi(self, draw):
-        draw.text((15, 10), "CONNECTING WiFi", font=self.font_medium, fill=0)
-        draw.rectangle([(0, 25), (128, 26)], fill=0)
-        draw.text((20, 35), "Establishing", font=self.font_small, fill=0)
-        draw.text((20, 45), "connection...", font=self.font_small, fill=0)
-        time_val = int((time.time() * 2) % 128)
-        draw.rectangle([(0, 55), (time_val, 60)], fill=0)
-    
-    def _draw_connecting_mqtt(self, draw):
-        draw.text((15, 10), "CONNECTING MQTT", font=self.font_medium, fill=0)
-        draw.rectangle([(0, 25), (128, 26)], fill=0)
-        draw.text((20, 35), "Establishing", font=self.font_small, fill=0)
-        draw.text((20, 45), "connection...", font=self.font_small, fill=0)
-        time_val = int((time.time() * 2) % 128)
-        draw.rectangle([(0, 55), (time_val, 60)], fill=0)
-    
-    def _draw_operational(self, draw, device_id, signal, mqtt_connected, custom_message=None):
-        # Status bar at top
+
+    def _draw_operational(self, draw, device_id, signal, mqtt_connected, custom_title=None, custom_message=None, temperature_sensor=None):
         status_line = ""
         if signal > 0:
             status_line += "W:" + ("▓" * signal) + "░" * (3 - signal)
@@ -253,12 +209,21 @@ class ScreenManager:
             status_line += " M:OK"
         else:
             status_line += " M:--"
+        if self.temperature_sensor:
+            try:
+                temp = self.temperature_sensor.get_temperature()
+                status_line += f" T:{temp}°C"
+            except Exception as e:
+                logger.error(f"Error reading temperature sensor: {e}")
+                status_line += " T:--°C"
+        else:
+            status_line += " T:--°C"
         
         draw.text((5, 0), status_line, font=self.font_small, fill=0)
         draw.rectangle([(0, 10), (128, 11)], fill=0)
-        
-        draw.text((10, 15), "READY", font=self.font_medium, fill=0)
-        draw.rectangle([(0, 30), (128, 31)], fill=0)
+        if custom_title:
+            draw.text((10, 15), custom_title, font=self.font_medium, fill=0)
+            draw.rectangle([(0, 30), (128, 31)], fill=0)
         
         if custom_message:
             lines = self._wrap_text(custom_message, 20)
@@ -266,13 +231,14 @@ class ScreenManager:
             for line in lines[:2]:
                 draw.text((10, y_pos), line, font=self.font_small, fill=0)
                 y_pos += 12
-        else:
-            device_id_str = str(device_id) if device_id else '?'
-            draw.text((10, 36), f"ID: {device_id_str[:16]}", 
-                     font=self.font_small, fill=0)
-            draw.text((10, 48), "MQTT listening", font=self.font_small, fill=0)
-            draw.text((10, 58), "ACK for menu", font=self.font_small, fill=0)
     
+    def _draw_ble_pairing(self, draw):
+        draw.text((18, 5), "BLE SERVER", font=self.font_medium, fill=0)
+        draw.rectangle([(0, 20), (128, 21)], fill=0)
+        draw.text((10, 25), "BLE server started", font=self.font_small, fill=0)
+        draw.text((10, 35), "as 'IoT Tea Device'", font=self.font_small, fill=0)
+        time_val = int(time.time()) % 4
+        draw.text((50, 50), "." * time_val, font=self.font_large, fill=0)
     
     def _draw_brewing(self, draw, progress):
         draw.text((25, 5), "BREWING", font=self.font_large, fill=0)
@@ -292,7 +258,6 @@ class ScreenManager:
     
     def _draw_menu(self, draw, menu_mode, items, current_index, signal=0, mqtt_connected=False):
         """Draw menu for tea, style or main selection with status bar"""
-        # Draw status bar at top
         status_line = ""
         if signal > 0:
             status_line += "W:" + ("▓" * signal) + "░" * (3 - signal)
@@ -302,6 +267,16 @@ class ScreenManager:
             status_line += " M:OK"
         else:
             status_line += " M:--"
+
+        if self.temperature_sensor:
+            try:
+                temp = self.temperature_sensor.get_temperature()
+                status_line += f" T:{temp}°C"
+            except Exception as e:
+                logger.error(f"Error reading temperature sensor: {e}")
+                status_line += " T:--°C"
+        else:
+            status_line += " T:--°C"
         
         draw.text((5, 0), status_line, font=self.font_small, fill=0)
         draw.rectangle([(0, 10), (128, 11)], fill=0)
@@ -315,7 +290,6 @@ class ScreenManager:
             return
         
         if menu_mode == 'main':
-            # Main menu - Brew, Custom Brew, Settings, Continue Brew
             draw.text((20, 15), "MAIN MENU", font=self.font_medium, fill=0)
             draw.rectangle([(0, 28), (128, 29)], fill=0)
             item_name = current_item.get('name', 'Unknown')
@@ -323,7 +297,6 @@ class ScreenManager:
             position_text = f"({current_index + 1}/{len(items)})"
             draw.text((10, 54), position_text, font=self.font_small, fill=0)
         elif menu_mode == 'tea_selection':
-            # Tea selection menu
             draw.text((15, 15), "SELECT TEA", font=self.font_medium, fill=0)
             draw.rectangle([(0, 28), (128, 29)], fill=0)
             item_name = current_item.get('name', 'Unknown')
@@ -334,7 +307,6 @@ class ScreenManager:
             position_text = f"({current_index + 1}/{len(items)})"
             draw.text((10, 54), position_text, font=self.font_small, fill=0)
         elif menu_mode == 'style_selection':
-            # Style selection menu
             draw.text((15, 15), "SELECT STYLE", font=self.font_medium, fill=0)
             draw.rectangle([(0, 28), (128, 29)], fill=0)
             item_name = current_item.get('style', 'Unknown')
@@ -345,7 +317,6 @@ class ScreenManager:
             position_text = f"({current_index + 1}/{len(items)})"
             draw.text((10, 54), position_text, font=self.font_small, fill=0)
         elif menu_mode == 'settings':
-            # Settings menu
             draw.text((20, 15), "SETTINGS", font=self.font_medium, fill=0)
             draw.rectangle([(0, 28), (128, 29)], fill=0)
             item_name = current_item.get('name', 'Unknown')

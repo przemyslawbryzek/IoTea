@@ -1,4 +1,9 @@
-import { Injectable, BadRequestException, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  Logger,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
 import { MqttService } from '../mqtt/mqtt.service';
@@ -14,13 +19,57 @@ export class BrewService {
     private mqttService: MqttService,
   ) {}
   async getAllByUser(userId: number) {
-    return this.prisma.brew.findMany({
+    const brews = await this.prisma.brew.findMany({
       where: {
         device: {
           owner_id: userId,
         },
       },
+      include: {
+        instruction: {
+          select: {
+            max_infusions: true,
+            teaId: true,
+            userTeaId: true,
+            tea: {
+              select: {
+                id: true,
+                name: true,
+                image_url: true,
+                brew_temp: true,
+              },
+            },
+            userTea: {
+              select: {
+                id: true,
+                name: true,
+                image_url: true,
+                brew_temp: true,
+              },
+            },
+          },
+        },
+        device: {
+          select: {
+            name: true,
+          },
+        },
+      },
+      orderBy: {
+        created_at: 'desc',
+      },
     });
+
+    return brews.map((brew) => ({
+      ...brew,
+      max_brew: brew.instruction.max_infusions,
+      tea_id: brew.instruction.teaId ?? brew.instruction.userTeaId,
+      tea_source: brew.instruction.userTeaId ? 'user' : 'base',
+      tea_name: brew.instruction.userTea?.name ?? brew.instruction.tea?.name ?? null,
+      tea_image_url: brew.instruction.userTea?.image_url ?? brew.instruction.tea?.image_url ?? null,
+      tea_temp: brew.instruction.userTea?.brew_temp ?? brew.instruction.tea?.brew_temp ?? null,
+      device_name: brew.device.name,
+    }));
   }
   async getOne(userId: number, brewId: number) {
     return this.prisma.brew.findFirst({
@@ -42,10 +91,27 @@ export class BrewService {
     const { deviceId, instructionId, volumeMl, brewNumber } = brewStartDto;
     const instruction = await this.prisma.brewing_instructions.findUnique({
       where: { id: instructionId },
+      include: {
+        tea: {
+          select: { id: true, brew_temp: true },
+        },
+        userTea: {
+          select: { id: true, owner_id: true, brew_temp: true },
+        },
+        style: true,
+      },
     });
 
     if (!instruction) {
       throw new BadRequestException('Brewing instruction not found');
+    }
+
+    if (instruction.userTeaId && instruction.userTea?.owner_id !== userId) {
+      throw new ForbiddenException('You do not own this brewing instruction');
+    }
+
+    if (!instruction.teaId && !instruction.userTeaId) {
+      throw new BadRequestException('Brewing instruction is not linked to a tea');
     }
     const brew = await this.prisma.brew.create({
       data: {
