@@ -197,7 +197,7 @@ export function TeaGrid({ teas, loading, continueBrews = [] }: Props) {
                 <p className="text-xs uppercase tracking-[0.18em]">Continue brews</p>
                 <Link to="/brews" className="text-xs text-black/50 underline underline-offset-2">view all</Link>
               </div>
-              <div className="flex flex-col gap-3 overflow-x-auto flex-nowrap w-full">
+              <div className="flex flex-row gap-3 overflow-x-auto flex-nowrap w-full">
                 {unfinishedBrews.map((brew) => (
                   <Link
                     key={brew.id}
