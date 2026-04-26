@@ -123,9 +123,33 @@ export class MyTeaService {
       throw new NotFoundException(`My tea ${teaId} not found`);
     }
 
-    await this.prisma.user_tea.delete({
-      where: { id: teaId },
+    const instructions = await this.prisma.brewing_instructions.findMany({
+      where: { userTeaId: teaId },
+      select: { id: true },
     });
+    const instructionIds = instructions.map((instruction) => instruction.id);
+
+    await this.prisma.$transaction(async (tx) => {
+      if (instructionIds.length > 0) {
+        await tx.brew.deleteMany({
+          where: { instruction_id: { in: instructionIds } },
+        });
+      }
+
+      await tx.brewing_instructions.deleteMany({
+        where: { userTeaId: teaId },
+      });
+
+      await tx.user_tea.delete({
+        where: { id: teaId },
+      });
+    });
+
+    await Promise.all(
+      instructionIds.map((instructionId) =>
+        this.invalidateInstructionCache(instructionId),
+      ),
+    );
 
     return { message: `My tea ${teaId} deleted` };
   }
@@ -230,8 +254,14 @@ export class MyTeaService {
   ) {
     await this.getMyTeaInstruction(userId, teaId, instructionId);
 
-    await this.prisma.brewing_instructions.delete({
-      where: { id: instructionId },
+    await this.prisma.$transaction(async (tx) => {
+      await tx.brew.deleteMany({
+        where: { instruction_id: instructionId },
+      });
+
+      await tx.brewing_instructions.delete({
+        where: { id: instructionId },
+      });
     });
 
     await this.invalidateInstructionCache(instructionId);
