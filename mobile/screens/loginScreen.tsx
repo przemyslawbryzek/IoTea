@@ -4,35 +4,38 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
   Alert,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import tw from 'twrnc';
+import { theme } from '../styles/theme';
 import { login } from '../services/api';
+import { useSwipeBack } from '../hooks/useSwipeBack';
 
 interface LoginScreenProps {
   navigation: any;
 }
 
 export default function LoginScreen({ navigation }: LoginScreenProps) {
+  const { panHandlers } = useSwipeBack(() => navigation.goBack());
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert('Błąd', 'Wypełnij wszystkie pola');
+      Alert.alert('Error', 'Please fill in all fields.');
       return;
     }
 
     setLoading(true);
     try {
       await login(email, password);
-      navigation.replace('Devices');
+      navigation.replace('HomeHub');
     } catch (error: any) {
-      Alert.alert('Błąd logowania', error.message || 'Sprawdź email i hasło');
+      Alert.alert('Login failed', error.message || 'Please check your email and password.');
     } finally {
       setLoading(false);
     }
@@ -40,113 +43,72 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={tw`flex-1`}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      {...panHandlers}
     >
-      <View style={styles.inner}>
-        <Text style={styles.title}>IoT Tea</Text>
-        <Text style={styles.subtitle}>Zaloguj się do swojego konta</Text>
-
-        <TextInput
-          style={styles.input}
-          placeholder="Email"
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
-          editable={Boolean(!loading)}
-        />
-
-        <TextInput
-          style={styles.input}
-          placeholder="Hasło"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry={true}
-          editable={Boolean(!loading)}
-        />
-
-        <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={handleLogin}
-          disabled={Boolean(loading)}
+      <View style={[tw`flex-1 justify-center px-6`, { backgroundColor: theme.colors.background }]}>
+        <View
+          style={[
+            tw`px-[22px] py-7`,
+          ]}
         >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>Zaloguj się</Text>
-          )}
-        </TouchableOpacity>
+          <Text style={[tw`text-xs font-bold tracking-[2px] mb-[10px] text-center`, { color: theme.colors.accent }]}>IOTEA</Text>
+          <Text style={[tw`text-[34px] font-bold text-center mb-[10px]`, { color: theme.colors.textPrimary }]}>Welcome back</Text>
+          <Text style={[tw`text-base text-center mb-7`, { color: theme.colors.textMuted }]}>Sign in to manage your brew devices.</Text>
 
-        <TouchableOpacity
-          onPress={() => navigation.navigate('Register')}
-          disabled={Boolean(loading)}
-        >
-          <Text style={styles.link}>
-            Nie masz konta? <Text style={styles.linkBold}>Zarejestruj się</Text>
-          </Text>
-        </TouchableOpacity>
+          <TextInput
+            style={[
+              tw`px-[15px] py-3 rounded-xl mb-[15px] border text-base border-black/15`,
+              { backgroundColor: theme.colors.inputBg, color: theme.colors.textPrimary },
+            ]}
+            placeholder="Email"
+            placeholderTextColor={theme.colors.placeholder}
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            keyboardType="email-address"
+            editable={Boolean(!loading)}
+          />
+
+          <TextInput
+            style={[
+              tw`px-[15px] py-3 rounded-xl mb-[15px] border text-base border-black/15`,
+              { backgroundColor: theme.colors.inputBg, color: theme.colors.textPrimary },
+            ]}
+            placeholder="Password"
+            placeholderTextColor={theme.colors.placeholder}
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry={true}
+            editable={Boolean(!loading)}
+          />
+
+          <TouchableOpacity
+            style={[
+              tw`py-[14px] rounded-xl items-center mt-[10px]`,
+              { backgroundColor: loading ? '#51961f/95' : '#51961f' },
+            ]}
+            onPress={handleLogin}
+            disabled={Boolean(loading)}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={tw`text-white text-lg font-bold`}>Sign in</Text>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Register')}
+            disabled={Boolean(loading)}
+          >
+            <Text style={[tw`text-center mt-5 text-sm`, { color: theme.colors.textMuted }]}>
+              New here? <Text style={[tw`font-bold`, { color: theme.colors.accent }]}>Create account</Text>
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  inner: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 30,
-  },
-  title: {
-    fontSize: 36,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 10,
-    color: '#27ae60',
-  },
-  subtitle: {
-    fontSize: 16,
-    textAlign: 'center',
-    marginBottom: 40,
-    color: '#7f8c8d',
-  },
-  input: {
-    backgroundColor: '#fff',
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    borderRadius: 10,
-    marginBottom: 15,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    fontSize: 16,
-  },
-  button: {
-    backgroundColor: '#27ae60',
-    paddingVertical: 14,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  buttonDisabled: {
-    backgroundColor: '#95a5a6',
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  link: {
-    textAlign: 'center',
-    marginTop: 20,
-    color: '#7f8c8d',
-    fontSize: 14,
-  },
-  linkBold: {
-    color: '#27ae60',
-    fontWeight: 'bold',
-  },
-});

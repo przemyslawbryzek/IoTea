@@ -13,6 +13,8 @@ import {
 } from 'react-native';
 import { bleService } from '../services/ble';
 import { BleDevice } from '../services/interfaces/device.interface';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { useSwipeBack } from '../hooks/useSwipeBack';
 
 type Step = 'scan' | 'wifi' | 'provisioning' | 'done';
 
@@ -21,6 +23,7 @@ interface ProvisioningScreenProps {
 }
 
 export default function ProvisioningScreen({ navigation }: ProvisioningScreenProps) {
+  const { panHandlers } = useSwipeBack(() => navigation.goBack());
   const [step, setStep] = useState<Step>('scan');
   const [devices, setDevices] = useState<BleDevice[]>([]);
   const [selectedDevice, setSelectedDevice] = useState<BleDevice | null>(null);
@@ -87,6 +90,8 @@ export default function ProvisioningScreen({ navigation }: ProvisioningScreenPro
     }
   };
 
+  const { refreshing, onRefresh } = usePullToRefresh(handleScan, { externalRefreshing: scanning });
+
   const handleSelectDevice = (device: BleDevice) => {
     setSelectedDevice(device);
     bleService.stopScan();
@@ -146,7 +151,10 @@ export default function ProvisioningScreen({ navigation }: ProvisioningScreenPro
   // ─── SCAN STEP ────────────────────────────────────────────────
   if (step === 'scan') {
     return (
-      <Animated.View style={[styles.container, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+      <Animated.View
+        style={[styles.container, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}
+        {...panHandlers}
+      >
         <Text style={styles.stepLabel}>KROK 1 / 3</Text>
         <Text style={styles.title}>Znajdź urządzenie</Text>
         <Text style={styles.subtitle}>Upewnij się że urządzenie jest włączone i w trybie parowania</Text>
@@ -179,6 +187,8 @@ export default function ProvisioningScreen({ navigation }: ProvisioningScreenPro
           data={devices}
           keyExtractor={(item) => item.id}
           style={styles.deviceList}
+          onRefresh={onRefresh}
+          refreshing={refreshing}
           renderItem={({ item }) => (
             <TouchableOpacity style={styles.deviceItem} onPress={() => handleSelectDevice(item)}>
               <View style={styles.deviceInfo}>
@@ -201,7 +211,10 @@ export default function ProvisioningScreen({ navigation }: ProvisioningScreenPro
   // ─── WIFI STEP ────────────────────────────────────────────────
   if (step === 'wifi') {
     return (
-      <Animated.View style={[styles.container, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+      <Animated.View
+        style={[styles.container, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}
+        {...panHandlers}
+      >
         <Text style={styles.stepLabel}>KROK 2 / 3</Text>
         <Text style={styles.title}>Konfiguracja</Text>
 
@@ -258,7 +271,7 @@ export default function ProvisioningScreen({ navigation }: ProvisioningScreenPro
   // ─── PROVISIONING STEP ────────────────────────────────────────
   if (step === 'provisioning') {
     return (
-      <Animated.View style={[styles.container, styles.centeredContainer, { opacity: fadeAnim }]}>
+      <Animated.View style={[styles.container, styles.centeredContainer, { opacity: fadeAnim }]} {...panHandlers}> 
         <ActivityIndicator size="large" color="#27ae60" />
         <Text style={styles.provisioningTitle}>Konfigurowanie urządzenia...</Text>
         <Text style={styles.provisioningSubtitle}>Rejestracja w API i wysyłanie danych przez BLE</Text>
@@ -270,7 +283,7 @@ export default function ProvisioningScreen({ navigation }: ProvisioningScreenPro
   // ─── DONE STEP ────────────────────────────────────────────────
   if (step === 'done') {
     return (
-      <Animated.View style={[styles.container, styles.centeredContainer, { opacity: fadeAnim }]}>
+      <Animated.View style={[styles.container, styles.centeredContainer, { opacity: fadeAnim }]} {...panHandlers}> 
         <Text style={styles.doneIcon}>✅</Text>
         <Text style={styles.doneTitle}>Urządzenie skonfigurowane!</Text>
         <Text style={styles.doneSubtitle}>

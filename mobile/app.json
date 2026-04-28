@@ -4,12 +4,12 @@
     "slug": "mobile",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/065ee734cc67b8b74fdd5b0b85c78061b5abaec9.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/logo_nobg.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#FFFBEF"
     },
     "ios": {
       "supportsTablet": true,
@@ -20,10 +20,8 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "backgroundColor": "#FFFBEF",
+        "foregroundImage": "./assets/logo_nobg.png"
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.anonymous.mobile",
@@ -36,7 +34,7 @@
       ]
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/065ee734cc67b8b74fdd5b0b85c78061b5abaec9.png"
     },
     "sdkVersion": "54.0.0"
   }

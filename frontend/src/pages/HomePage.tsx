@@ -65,6 +65,30 @@ export function HomePage() {
     };
   }, [authenticated]);
 
+  useEffect(() => {
+    if (!authenticated || !selectedDeviceId) return;
+    let active = true;
+
+    const refreshStatus = async () => {
+      try {
+        const status = await getDeviceStatus(selectedDeviceId);
+        if (active) setDeviceStatus(status);
+      } catch (err) {
+        if (active) {
+          setError(err instanceof Error ? err.message : 'Unknown error');
+        }
+      }
+    };
+
+    const intervalId = setInterval(refreshStatus, 15000);
+    void refreshStatus();
+
+    return () => {
+      active = false;
+      clearInterval(intervalId);
+    };
+  }, [authenticated, selectedDeviceId]);
+
   const handleSelectDevice = async (deviceId: number) => {
     setSelectedDeviceId(deviceId);
     setDeviceLoading(true);

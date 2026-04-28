@@ -1,6 +1,7 @@
 export interface TeaCategory {
   id: number;
   name: string;
+  icon_url?: string | null;
 }
 
 export interface Tea {
@@ -11,4 +12,5 @@ export interface Tea {
   categoryId: number;
   brew_temp: number;
   category: TeaCategory;
+  source?: 'base' | 'user';
 }
