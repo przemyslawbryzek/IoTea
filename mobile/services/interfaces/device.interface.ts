@@ -4,6 +4,18 @@ export interface DeviceStatus {
   status: string;
   lastSeen: string;
 }
+
+export interface DeviceSummary {
+  id: number;
+  name: string;
+  model: string | null;
+  firmware_version: string | null;
+  last_seen: string | null;
+  created_at: string;
+  online: boolean;
+  currentTemp: number | null;
+  currentTempUpdatedAt: string | null;
+}
 export interface RegisterDeviceResponse {
   id: number;
   name: string;

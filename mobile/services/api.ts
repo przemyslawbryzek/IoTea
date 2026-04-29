@@ -173,6 +173,11 @@ export const getDevices = async (): Promise<Array<{
   return response.data;
 };
 
+export const deleteDevice = async (deviceId: number): Promise<{ message: string }> => {
+  const response = await api.delete(`/devices/${deviceId}`);
+  return response.data;
+};
+
 export const getDeviceStatus = async (deviceId: number): Promise<DeviceStatus> => {
   const response: AxiosResponse<DeviceStatus> = await api.get(`/devices/${deviceId}/status`);
   return response.data;

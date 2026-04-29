@@ -309,9 +309,12 @@ export default function TeaScreen({ navigation }: TeaScreenProps) {
               {deviceLoading ? <Text style={tw`mt-3 text-sm text-black/60`}>Loading status...</Text> : null}
             </View>
           ) : (
-            <View style={tw`mt-5 rounded-3xl border px-4 py-4`}>
-              <Text style={tw`text-sm`}>Log in to view devices</Text>
-            </View>
+            <TouchableOpacity
+              style={tw`mt-5 items-center rounded-3xl bg-[#51961f] px-4 py-4`}
+              onPress={() => navigation.navigate('AddDevice')}
+            >
+              <Text style={tw`text-sm font-semibold text-[#FFFBEF]`}>+ Add device</Text>
+            </TouchableOpacity>
           )}
 
           {error ? <Text style={tw`mt-4 rounded-2xl border border-black/20 px-4 py-3 text-sm`}>{error}</Text> : null}
