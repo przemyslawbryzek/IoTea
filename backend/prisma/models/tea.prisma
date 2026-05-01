@@ -14,6 +14,8 @@ model Tea {
     category tea_category @relation(fields: [categoryId], references: [id])
     brew_temp Int
     instructions brewing_instructions[] @relation("TeaInstructions")
+    ratings tea_rating[]
+    favorites tea_favorite[]
 }
 
 model user_tea {
@@ -27,11 +29,69 @@ model user_tea {
     category tea_category @relation(fields: [categoryId], references: [id])
     brew_temp Int
     instructions brewing_instructions[] @relation("UserTeaInstructions")
+    ratings user_tea_rating[]
+    favorites user_tea_favorite[]
     created_at DateTime @default(now())
     updated_at DateTime @updatedAt
 
     @@index([owner_id])
     @@index([categoryId])
+}
+
+model tea_rating {
+    id Int @id @default(autoincrement())
+    userId Int
+    teaId Int
+    value Int
+    user user @relation(fields: [userId], references: [id], onDelete: Cascade)
+    tea Tea @relation(fields: [teaId], references: [id], onDelete: Cascade)
+    created_at DateTime @default(now())
+    updated_at DateTime @updatedAt
+
+    @@unique([userId, teaId])
+    @@index([teaId])
+    @@index([userId])
+}
+
+model tea_favorite {
+    id Int @id @default(autoincrement())
+    userId Int
+    teaId Int
+    user user @relation(fields: [userId], references: [id], onDelete: Cascade)
+    tea Tea @relation(fields: [teaId], references: [id], onDelete: Cascade)
+    created_at DateTime @default(now())
+
+    @@unique([userId, teaId])
+    @@index([teaId])
+    @@index([userId])
+}
+
+model user_tea_rating {
+    id Int @id @default(autoincrement())
+    userId Int
+    userTeaId Int
+    value Int
+    user user @relation(fields: [userId], references: [id], onDelete: Cascade)
+    userTea user_tea @relation(fields: [userTeaId], references: [id], onDelete: Cascade)
+    created_at DateTime @default(now())
+    updated_at DateTime @updatedAt
+
+    @@unique([userId, userTeaId])
+    @@index([userTeaId])
+    @@index([userId])
+}
+
+model user_tea_favorite {
+    id Int @id @default(autoincrement())
+    userId Int
+    userTeaId Int
+    user user @relation(fields: [userId], references: [id], onDelete: Cascade)
+    userTea user_tea @relation(fields: [userTeaId], references: [id], onDelete: Cascade)
+    created_at DateTime @default(now())
+
+    @@unique([userId, userTeaId])
+    @@index([userTeaId])
+    @@index([userId])
 }
 
 model brewing_style{

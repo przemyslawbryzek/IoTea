@@ -1,8 +1,61 @@
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { BrewProcessAnimations } from '../components/BrewProcessAnimations';
+import { TeaRating } from '../components/TeaRating';
+import type { BrewSummary } from '../interfaces/brew.interface';
+import { getBrews, setTeaRating } from '../services/api';
 
 export function BrewPage() {
   const { id } = useParams();
+  const [brew, setBrew] = useState<BrewSummary | null>(null);
+  const [ratingValue, setRatingValue] = useState<0 | 1 | null>(null);
+  const [ratingLoading, setRatingLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const brewId = useMemo(() => Number(id), [id]);
+
+  useEffect(() => {
+    let active = true;
+
+    const load = async () => {
+      if (!Number.isFinite(brewId)) {
+        setError('Nieprawidlowe ID parzenia');
+        return;
+      }
+
+      try {
+        const brews = await getBrews();
+        if (!active) return;
+        const match = brews.find((item) => item.id === brewId) ?? null;
+        setBrew(match);
+        setError(match ? '' : 'Nie znaleziono parzenia');
+      } catch (loadError) {
+        if (!active) return;
+        setError(loadError instanceof Error ? loadError.message : 'Nie udalo sie zaladowac parzenia');
+      }
+    };
+
+    void load();
+
+    return () => {
+      active = false;
+    };
+  }, [brewId]);
+
+  const handleRate = async (value: 0 | 1) => {
+    if (!brew?.tea_id || !brew.tea_source) return;
+
+    try {
+      setRatingLoading(true);
+      await setTeaRating(brew.tea_id, brew.tea_source, value);
+      setRatingValue(value);
+      setError('');
+    } catch (ratingError) {
+      setError(ratingError instanceof Error ? ratingError.message : 'Nie udalo sie zapisac oceny');
+    } finally {
+      setRatingLoading(false);
+    }
+  };
 
   return (
     <main className="min-h-app">
@@ -21,6 +74,16 @@ export function BrewPage() {
             Strona parzenia jest gotowa pod ścieżką /brew/:id i możesz tu dodać live status.
           </p>
         </div>
+
+        {error ? (
+          <p className="mt-4 max-w-xl rounded-2xl border border-black/20 px-4 py-3 text-sm text-black/70">
+            {error}
+          </p>
+        ) : null}
+
+        {brew?.tea_id && brew.tea_source ? (
+          <TeaRating value={ratingValue} onRate={handleRate} loading={ratingLoading} />
+        ) : null}
 
         <BrewProcessAnimations />
       </div>

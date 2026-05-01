@@ -13,4 +13,6 @@ export interface Tea {
   brew_temp: number;
   category: TeaCategory;
   source?: 'base' | 'user';
+  rating_percent?: number | null;
+  is_favorite?: boolean;
 }

@@ -31,6 +31,17 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
+
+    if (error.response) {
+      console.log('API error', {
+        status: error.response.status,
+        url: error.config?.url,
+        method: error.config?.method,
+        data: error.response.data,
+      });
+    } else {
+      console.log('API error', { message: error.message, url: error.config?.url, method: error.config?.method });
+    }
     
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
@@ -95,6 +106,16 @@ export const getTeaById = async (teaId: number): Promise<Tea & {
   }>;
 }> => {
   const response = await api.get(`/tea/${teaId}`);
+  return response.data;
+};
+
+export const addTeaFavorite = async (teaId: number, source: 'base' | 'user'): Promise<{ is_favorite: boolean }> => {
+  const response = await api.post(`/tea/${teaId}/favorite`, {}, { params: { source } });
+  return response.data;
+};
+
+export const removeTeaFavorite = async (teaId: number, source: 'base' | 'user'): Promise<{ is_favorite: boolean }> => {
+  const response = await api.delete(`/tea/${teaId}/favorite`, { params: { source } });
   return response.data;
 };
 

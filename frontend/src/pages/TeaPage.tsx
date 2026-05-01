@@ -1,6 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { getTeaById, getMyTeaById, getDevices, startBrew } from '../services/api';
+import {
+    addTeaFavorite,
+    getTeaById,
+    getMyTeaById,
+    getDevices,
+    removeTeaFavorite,
+    startBrew,
+} from '../services/api';
 import type { Tea } from '../interfaces/tea.interface';
 import type { MyTeaDetail } from '../interfaces/mytea.interface';
 import type { DeviceSummary } from '../interfaces/device.interface';
@@ -28,6 +35,7 @@ type TeaPageTea = {
     };
     source?: 'base' | 'user';
     instructions?: TeaPageInstruction[];
+    is_favorite?: boolean;
 };
 
 export function TeaPage() {
@@ -36,6 +44,8 @@ export function TeaPage() {
     const navigate = useNavigate();
     const [tea, setTea] = useState<TeaPageTea | null>(null);
     const [showModal, setShowModal] = useState(false);
+    const [isFavorite, setIsFavorite] = useState(false);
+    const [favoriteLoading, setFavoriteLoading] = useState(false);
     const [devices, setDevices] = useState<DeviceSummary[]>([]);
     const [selectedDevice, setSelectedDevice] = useState<number | null>(null);
     const [selectedInstruction, setSelectedInstruction] = useState<TeaPageInstruction | null>(null);
@@ -60,6 +70,7 @@ export function TeaPage() {
                         brew_temp: teaData.brew_temp,
                         category: teaData.category,
                         source: (teaData as Tea).source ?? (source === 'user' ? 'user' : 'base'),
+                        is_favorite: (teaData as Tea).is_favorite,
                         instructions: (teaData.instructions ?? []).map((instruction) => ({
                             id: instruction.id,
                             style: { name: instruction.style.name },
@@ -71,6 +82,7 @@ export function TeaPage() {
                     };
 
                     setTea(normalizedTea);
+                    setIsFavorite(Boolean(normalizedTea.is_favorite));
                     if (teaData.instructions && teaData.instructions.length > 0) {
                         setSelectedInstruction(normalizedTea.instructions?.[0] ?? null);
                     } else {
@@ -123,6 +135,30 @@ export function TeaPage() {
             setIsBrewing(false);
         }
     };
+
+    const handleToggleFavorite = async () => {
+        if (!tea) return;
+        if (favoriteLoading) return;
+
+        try {
+            setFavoriteLoading(true);
+            const nextFavorite = !isFavorite;
+            const teaSource = tea.source ?? (source === 'user' ? 'user' : 'base');
+
+            if (nextFavorite) {
+                await addTeaFavorite(tea.id, teaSource);
+            } else {
+                await removeTeaFavorite(tea.id, teaSource);
+            }
+
+            setIsFavorite(nextFavorite);
+            setTea((current) => (current ? { ...current, is_favorite: nextFavorite } : current));
+        } catch (error) {
+            console.error('Error toggling favorite:', error);
+        } finally {
+            setFavoriteLoading(false);
+        }
+    };
     return (
         <main className="min-h-app">
             <div className="mx-auto flex w-full max-w-7xl flex-col px-5 py-5 lg:px-8">
@@ -144,6 +180,16 @@ export function TeaPage() {
                         alt={tea?.category?.name}
                         className="p-2 size-10 absolute top-1/2 -translate-y-1/2 left-5 rounded-full border border-white bg-white z-10"
                     />
+                    <button onClick={handleToggleFavorite} disabled={favoriteLoading}>
+                        <img
+                            src={isFavorite
+                                ? "https://img.icons8.com/?size=100&id=84881&format=png&color=FF0000"
+                                : "https://img.icons8.com/?size=100&id=85038&format=png&color=000000"
+                            }
+                            alt="Favorite icon"
+                            className="p-2 size-10 absolute top-1/2 -translate-y-1/2 right-20 rounded-full border border-white bg-white hover:bg-gray-100 z-10"
+                        />
+                    </button>
                     <button onClick={() => setShowModal(true)}>
                         <img
                             src="https://img.icons8.com/?size=100&id=sYKZOhn95Ako&format=png&color=000000"

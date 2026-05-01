@@ -50,22 +50,24 @@ export function BrewsPage() {
           ) : brews.length ? (
             <div className="space-y-2">
               {brews.map((brew) => (
-                <article key={brew.id} className="rounded-2xl border border-black/15 bg-white/75 p-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-base font-semibold text-black">Brew #{brew.id}</p>
-                    <span className="rounded-full border border-black/20 px-3 py-1 text-xs uppercase tracking-[0.12em] text-black/70">
-                      {brew.status}
-                    </span>
+                <Link to={`/brew/${brew.id}`} key={brew.id}>
+                  <div className="rounded-2xl border border-black/15 bg-white/75 p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-base font-semibold text-black">Brew #{brew.id}</p>
+                      <span className="rounded-full border border-black/20 px-3 py-1 text-xs uppercase tracking-[0.12em] text-black/70">
+                        {brew.status}
+                      </span>
+                    </div>
+                    <div className="mt-2 grid gap-1 text-sm text-black/70 md:grid-cols-2">
+                      <p>Device: {brew.device_id}</p>
+                      <p>Instruction: {brew.instruction_id}</p>
+                      <p>Volume: {brew.volume_ml}ml</p>
+                      <p>Infusion: #{brew.brew_number}</p>
+                      <p>Start: {new Date(brew.start_time).toLocaleString()}</p>
+                      <p>End: {brew.end_time ? new Date(brew.end_time).toLocaleString() : '-'}</p>
+                    </div>
                   </div>
-                  <div className="mt-2 grid gap-1 text-sm text-black/70 md:grid-cols-2">
-                    <p>Device: {brew.device_id}</p>
-                    <p>Instruction: {brew.instruction_id}</p>
-                    <p>Volume: {brew.volume_ml}ml</p>
-                    <p>Infusion: #{brew.brew_number}</p>
-                    <p>Start: {new Date(brew.start_time).toLocaleString()}</p>
-                    <p>End: {brew.end_time ? new Date(brew.end_time).toLocaleString() : '-'}</p>
-                  </div>
-                </article>
+                </Link>
               ))}
             </div>
           ) : (

@@ -8,6 +8,10 @@ model user {
   updated_at    DateTime         @updatedAt
   devices      device[]
   user_teas    user_tea[]
+  tea_ratings tea_rating[]
+  tea_favorites tea_favorite[]
+  user_tea_ratings user_tea_rating[]
+  user_tea_favorites user_tea_favorite[]
 }
 
 enum role {

@@ -28,7 +28,9 @@ interface TeaScreenProps {
 const fallbackImage = 'https://images.unsplash.com/photo-1602943543714-cf535b048440?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxncmVlbiUyMHRlYSUyMGxlYXZlc3xlbnwxfHx8fDE3NzMyMTk0NzJ8MA&ixlib=rb-4.1.0&q=80&w=1080';
 const fallbackCategoryIcon = 'https://img.icons8.com/?size=100&id=rCUgZeMLbaAM&format=png&color=000000';
 const myTeasIcon = 'https://img.icons8.com/?size=100&id=15265&format=png&color=000000';
+const favoritesIcon = 'https://img.icons8.com/?size=100&id=85038&format=png&color=000000';
 const tempIcon = 'https://img.icons8.com/?size=100&id=EdMznDNT8gPX&format=png&color=000000';
+const ratingIcon = 'https://img.icons8.com/?size=100&id=82788&format=png&color=000000';
 const collapseIcon = 'https://img.icons8.com/?size=100&id=40025&format=png&color=000000';
 const expandIcon = 'https://img.icons8.com/?size=100&id=40021&format=png&color=000000';
 
@@ -52,6 +54,7 @@ export default function TeaScreen({ navigation }: TeaScreenProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategoryId, setActiveCategoryId] = useState<number | null>(null);
   const [myTeasOnly, setMyTeasOnly] = useState(false);
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [showSortFilter, setShowSortFilter] = useState(false);
   const [tempMin, setTempMin] = useState('0');
   const [tempMax, setTempMax] = useState('100');
@@ -123,15 +126,16 @@ export default function TeaScreen({ navigation }: TeaScreenProps) {
     return teas.filter((tea) => {
       const matchesCategory = activeCategoryId === null || tea.category.id === activeCategoryId;
       const matchesSource = !myTeasOnly || tea.source === 'user';
+      const matchesFavorites = !favoritesOnly || tea.is_favorite === true;
       const matchesTemp = tea.brew_temp >= minTemp && tea.brew_temp <= maxTemp;
       const matchesQuery =
         normalizedQuery.length === 0 ||
         tea.name.toLowerCase().includes(normalizedQuery) ||
         tea.category.name.toLowerCase().includes(normalizedQuery);
 
-      return matchesCategory && matchesSource && matchesTemp && matchesQuery;
+      return matchesCategory && matchesSource && matchesFavorites && matchesTemp && matchesQuery;
     });
-  }, [activeCategoryId, myTeasOnly, searchQuery, teas, tempMax, tempMin]);
+  }, [activeCategoryId, favoritesOnly, myTeasOnly, searchQuery, teas, tempMax, tempMin]);
 
   const visibleTeas = useMemo(() => {
     const sorted = [...filteredTeas];
@@ -388,6 +392,21 @@ export default function TeaScreen({ navigation }: TeaScreenProps) {
                 <Text style={tw`mt-2 text-sm`}>My Teas</Text>
               </TouchableOpacity>
 
+              <TouchableOpacity
+                onPress={() => setFavoritesOnly((current) => !current)}
+                style={tw`items-center px-2 py-1.5`}
+              >
+                <View
+                  style={[
+                    tw`h-11 w-11 items-center justify-center rounded-full border`,
+                    { backgroundColor: favoritesOnly ? '#eee' : '#fff', borderColor: favoritesOnly ? 'grey' : '#ead9c8' },
+                  ]}
+                >
+                  <Image source={{ uri: favoritesIcon }} resizeMode="contain" style={tw`h-5 w-5`} />
+                </View>
+                <Text style={tw`mt-2 text-sm`}>Favorites</Text>
+              </TouchableOpacity>
+
               {categories.map((category) => {
                 const isActive = activeCategoryId === category.id;
 
@@ -477,9 +496,19 @@ export default function TeaScreen({ navigation }: TeaScreenProps) {
                       <Image source={{ uri: tea.image_url || fallbackImage }} resizeMode="cover" style={tw`h-44 w-full`} />
                     </View>
                     <Text style={tw`mt-4 text-lg font-medium`}>{tea.name}</Text>
-                    <View style={tw`mt-1 flex-row items-center`}>
-                      <Image source={{ uri: tempIcon }} resizeMode="contain" style={tw`mr-1 h-4 w-4`} />
-                      <Text style={tw`text-sm text-black/70`}>{tea.brew_temp}°C</Text>
+                    <View style={tw`mt-1 flex-row items-center gap-3`}>
+                      <View style={tw`flex-row items-center gap-1`}>
+                        <Image source={{ uri: tempIcon }} resizeMode="contain" style={tw`h-4 w-4`} />
+                        <Text style={tw`text-sm text-black/70`}>{tea.brew_temp}°C</Text>
+                      </View>
+                      <View style={tw`flex-row items-center gap-1`}>
+                        <Image source={{ uri: ratingIcon }} resizeMode="contain" style={tw`h-4 w-4`} />
+                        <Text style={tw`text-sm text-black/70`}>
+                          {tea.rating_percent === null || tea.rating_percent === undefined
+                            ? '-'
+                            : `${tea.rating_percent}%`}
+                        </Text>
+                      </View>
                     </View>
                   </TouchableOpacity>
                 ))

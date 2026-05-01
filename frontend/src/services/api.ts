@@ -74,6 +74,28 @@ export async function getTeaById(teaId: number) {
   return request<Tea>(`/tea/${teaId}`, { auth: true });
 }
 
+export async function addTeaFavorite(teaId: number, source: 'base' | 'user') {
+  return request<{ is_favorite: boolean }>(`/tea/${teaId}/favorite?source=${source}`, {
+    method: 'POST',
+    auth: true,
+  });
+}
+
+export async function removeTeaFavorite(teaId: number, source: 'base' | 'user') {
+  return request<{ is_favorite: boolean }>(`/tea/${teaId}/favorite?source=${source}`, {
+    method: 'DELETE',
+    auth: true,
+  });
+}
+
+export async function setTeaRating(teaId: number, source: 'base' | 'user', value: 0 | 1) {
+  return request<{ value: number; rating_percent?: number | null }>(`/tea/${teaId}/rating?source=${source}`, {
+    method: 'POST',
+    auth: true,
+    body: { value },
+  });
+}
+
 export async function login(email: string, password: string) {
   return request<LoginResponse>('/auth/login', {
     method: 'POST',

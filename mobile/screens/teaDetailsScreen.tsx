@@ -12,7 +12,14 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import tw from 'twrnc';
-import { getDevices, getMyTeaById, getTeaById, startBrew } from '../services/api';
+import {
+  addTeaFavorite,
+  getDevices,
+  getMyTeaById,
+  getTeaById,
+  removeTeaFavorite,
+  startBrew,
+} from '../services/api';
 import type { Tea } from '../services/interfaces/tea.interface';
 import { useSwipeBack } from '../hooks/useSwipeBack';
 import { theme } from '../styles/theme';
@@ -44,6 +51,8 @@ type TeaDetailsScreenProps = {
 
 const fallbackImage = 'https://images.unsplash.com/photo-1602943543714-cf535b048440?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxncmVlbiUyMHRlYSUyMGxlYXZlc3xlbnwxfHx8fDE3NzMyMTk0NzJ8MA&ixlib=rb-4.1.0&q=80&w=1080';
 const fallbackCategoryIcon = 'https://img.icons8.com/?size=100&id=rCUgZeMLbaAM&format=png&color=000000';
+const favoriteIcon = 'https://img.icons8.com/?size=100&id=85038&format=png&color=000000';
+const favoriteActiveIcon = 'https://img.icons8.com/?size=100&id=84881&format=png&color=FF0000';
 
 type StepperInputProps = {
   value: number;
@@ -145,6 +154,8 @@ export default function TeaDetailsScreen({ navigation, route }: TeaDetailsScreen
   const [isBrewing, setIsBrewing] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [favoriteLoading, setFavoriteLoading] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -173,6 +184,7 @@ export default function TeaDetailsScreen({ navigation, route }: TeaDetailsScreen
 
         setTea(normalizedTea);
         setSelectedInstruction(normalizedTea.instructions?.[0] ?? null);
+        setIsFavorite(Boolean(normalizedTea.is_favorite));
 
         const brewNumberParam = Number(route.params?.brewNumber || '1');
         setBrewNumber(Number.isFinite(brewNumberParam) && brewNumberParam > 0 ? brewNumberParam : 1);
@@ -230,6 +242,29 @@ export default function TeaDetailsScreen({ navigation, route }: TeaDetailsScreen
     }
   };
 
+  const handleToggleFavorite = async () => {
+    if (!tea || favoriteLoading) return;
+
+    try {
+      setFavoriteLoading(true);
+      const nextFavorite = !isFavorite;
+      const teaSource = tea.source === 'base' || tea.source === 'user' ? tea.source : source;
+
+      if (nextFavorite) {
+        await addTeaFavorite(tea.id, teaSource);
+      } else {
+        await removeTeaFavorite(tea.id, teaSource);
+      }
+
+      setIsFavorite(nextFavorite);
+      setTea((current) => (current ? { ...current, is_favorite: nextFavorite } : current));
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+    } finally {
+      setFavoriteLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={tw`flex-1`} {...panHandlers}>
@@ -259,9 +294,13 @@ export default function TeaDetailsScreen({ navigation, route }: TeaDetailsScreen
                 />
               </TouchableOpacity>
               <View style={screenStyles.headerRight}>
-                <TouchableOpacity onPress={() => setShowModal(true)} style={screenStyles.headerIconButton}>
+                <TouchableOpacity
+                  onPress={handleToggleFavorite}
+                  disabled={favoriteLoading}
+                  style={screenStyles.headerIconButton}
+                >
                   <Image
-                    source={{ uri: 'https://img.icons8.com/?size=100&id=85038&format=png&color=000000' }}
+                    source={{ uri: isFavorite ? favoriteActiveIcon : favoriteIcon }}
                     resizeMode="contain"
                     style={screenStyles.headerIconImage}
                   />

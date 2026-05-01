@@ -13,6 +13,7 @@ export function TeaGrid({ teas, loading, continueBrews = [] }: Props) {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategoryId, setActiveCategoryId] = useState<number | null>(null);
   const [myTeasOnly, setMyTeasOnly] = useState(false);
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [showSortFilter, setShowSortFilter] = useState(false);
   const [tempMin, setTempMin] = useState(0);
   const [tempMax, setTempMax] = useState(100);
@@ -34,15 +35,16 @@ export function TeaGrid({ teas, loading, continueBrews = [] }: Props) {
     return teas.filter((tea) => {
       const matchesCategory = activeCategoryId === null || tea.category.id === activeCategoryId;
       const matchesSource = !myTeasOnly || (tea.source ?? 'base') === 'user';
+      const matchesFavorites = !favoritesOnly || tea.is_favorite === true;
       const matchesTemp = tea.brew_temp >= tempMin && tea.brew_temp <= tempMax;
       const matchesQuery =
         normalizedQuery.length === 0 ||
         tea.name.toLowerCase().includes(normalizedQuery) ||
         tea.category.name.toLowerCase().includes(normalizedQuery);
 
-      return matchesCategory && matchesSource && matchesTemp && matchesQuery;
+      return matchesCategory && matchesSource && matchesFavorites && matchesTemp && matchesQuery;
     });
-  }, [teas, activeCategoryId, myTeasOnly, searchQuery, tempMin, tempMax]);
+  }, [teas, activeCategoryId, myTeasOnly, favoritesOnly, searchQuery, tempMin, tempMax]);
 
   const visibleTeas = useMemo(() => {
     const sorted = [...filteredTeas];
@@ -155,6 +157,27 @@ export function TeaGrid({ teas, loading, continueBrews = [] }: Props) {
                 />
               </span>
               <span>My Teas</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setFavoritesOnly((prev) => !prev)}
+              className="flex flex-col items-center gap-2 px-2 py-1.5 text-sm transition-colors"
+            >
+              <span
+                className={`flex size-11 items-center justify-center rounded-full border
+                      ${favoritesOnly
+                        ? 'border-black bg-black/20'
+                        : 'border-black/25 hover:bg-black/5'
+                    }`}
+              >
+                <img
+                  className="size-5"
+                  src="https://img.icons8.com/?size=100&id=85038&format=png&color=000000"
+                  alt="Favorites icon"
+                />
+              </span>
+              <span>Favorites</span>
             </button>
 
             {categories.map((category) => {
@@ -271,13 +294,27 @@ export function TeaGrid({ teas, loading, continueBrews = [] }: Props) {
               </div>
               <div>
                 <h3 className="text-lg font-medium">{tea.name}</h3>
-                <div className="flex flex-row items-center">
-                  <img
-                    className="inline size-4"
-                    src="https://img.icons8.com/?size=100&id=EdMznDNT8gPX&format=png&color=000000"
-                    alt="Temperature icon"
-                  />
-                  <p className="text-sm text-black/70">{tea.brew_temp}°C</p>
+                <div className="mt-1 flex flex-row items-center gap-3 text-sm text-black/70">
+                  <div className="flex items-center gap-1">
+                    <img
+                      className="inline size-4"
+                      src="https://img.icons8.com/?size=100&id=EdMznDNT8gPX&format=png&color=000000"
+                      alt="Temperature icon"
+                    />
+                    <p>{tea.brew_temp}°C</p>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <img
+                      className="inline size-4"
+                      src="https://img.icons8.com/?size=100&id=82788&format=png&color=000000"
+                      alt="Rating icon"
+                    />
+                    <p>
+                      {tea.rating_percent === null || tea.rating_percent === undefined
+                        ? '-'
+                        : `${tea.rating_percent}%`}
+                    </p>
+                  </div>
                 </div>
               </div>
             </Link>

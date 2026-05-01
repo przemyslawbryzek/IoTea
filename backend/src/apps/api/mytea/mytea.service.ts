@@ -83,8 +83,10 @@ export class MyTeaService {
     if (!tea) {
       throw new NotFoundException(`My tea ${teaId} not found`);
     }
+    const rating_percent = await this.getUserTeaRatingPercent(teaId);
+    const is_favorite = await this.isUserTeaFavorite(userId, teaId);
 
-    return tea;
+    return { ...tea, rating_percent, is_favorite };
   }
 
   async updateTea(userId: number, teaId: number, input: UpdateMyTeaDto) {
@@ -347,5 +349,30 @@ export class MyTeaService {
     } catch {
       // Ignore cache invalidation errors
     }
+  }
+  private async isUserTeaFavorite(userId: number, userTeaId: number) {
+    const favorite = await this.prisma.user_tea_favorite.findUnique({
+      where: { userId_userTeaId: { userId, userTeaId } },
+      select: { id: true },
+    });
+
+    return Boolean(favorite);
+  }
+  private normalizeRatingPercent(avg: number | null): number | null {
+    if (avg === null) {
+      return null;
+    }
+
+    return Math.round(avg * 100);
+  }
+  private async getUserTeaRatingPercent(userTeaId: number) {
+    const result = await this.prisma.user_tea_rating.aggregate({
+      where: { userTeaId },
+      _avg: { value: true },
+    });
+
+    return this.normalizeRatingPercent(
+      result._avg.value === null ? null : Number(result._avg.value),
+    );
   }
 }

@@ -14,6 +14,8 @@ export interface Tea {
   category: TeaCategory;
   instructions?: instruction[];
   source?: 'base' | 'user';
+  rating_percent?: number | null;
+  is_favorite?: boolean;
 }
 export interface BrewingStyle {
     id: number;
