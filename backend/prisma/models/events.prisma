@@ -1,0 +1,29 @@
+model device_status_event {
+    id Int @id @default(autoincrement())
+    device_id Int
+    device device @relation(fields: [device_id], references: [id], onDelete: Cascade)
+    status String
+    ts DateTime
+    created_at DateTime @default(now())
+
+    @@index([device_id])
+    @@index([ts])
+    @@index([device_id, ts])
+}
+
+model brew_status_event {
+    id Int @id @default(autoincrement())
+    brew_id Int
+    brew brew @relation(fields: [brew_id], references: [id], onDelete: Cascade)
+    device_id Int
+    device device @relation(fields: [device_id], references: [id], onDelete: Cascade)
+    status String
+    ts DateTime
+    current_temp Float?
+    created_at DateTime @default(now())
+
+    @@index([brew_id])
+    @@index([device_id])
+    @@index([ts])
+    @@index([brew_id, ts])
+}

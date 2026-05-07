@@ -3,6 +3,7 @@ import {
   ForbiddenException,
   Injectable,
   Logger,
+  NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
@@ -29,6 +30,8 @@ export class BrewService {
         instruction: {
           select: {
             max_infusions: true,
+            first_infusion_seconds: true,
+            increment_seconds: true,
             teaId: true,
             userTeaId: true,
             tea: {
@@ -60,16 +63,23 @@ export class BrewService {
       },
     });
 
-    return brews.map((brew) => ({
-      ...brew,
-      max_brew: brew.instruction.max_infusions,
-      tea_id: brew.instruction.teaId ?? brew.instruction.userTeaId,
-      tea_source: brew.instruction.userTeaId ? 'user' : 'base',
-      tea_name: brew.instruction.userTea?.name ?? brew.instruction.tea?.name ?? null,
-      tea_image_url: brew.instruction.userTea?.image_url ?? brew.instruction.tea?.image_url ?? null,
-      tea_temp: brew.instruction.userTea?.brew_temp ?? brew.instruction.tea?.brew_temp ?? null,
-      device_name: brew.device.name,
-    }));
+      return brews.map((brew) => {
+        const totalBrewSeconds =
+          brew.instruction.first_infusion_seconds +
+          brew.instruction.increment_seconds * (brew.instruction.max_infusions - 1);
+
+        return {
+          ...brew,
+          max_brew: brew.instruction.max_infusions,
+          total_brew_seconds: totalBrewSeconds,
+          tea_id: brew.instruction.teaId ?? brew.instruction.userTeaId,
+          tea_source: brew.instruction.userTeaId ? 'user' : 'base',
+          tea_name: brew.instruction.userTea?.name ?? brew.instruction.tea?.name ?? null,
+          tea_image_url: brew.instruction.userTea?.image_url ?? brew.instruction.tea?.image_url ?? null,
+          tea_temp: brew.instruction.userTea?.brew_temp ?? brew.instruction.tea?.brew_temp ?? null,
+          device_name: brew.device.name,
+        };
+      });
   }
   async getOne(userId: number, brewId: number) {
     return this.prisma.brew.findFirst({
@@ -85,6 +95,32 @@ export class BrewService {
       throw new Error('Brew not found');
     }
     return brew.status;
+  }
+
+  async getHistory(userId: number, brewId: number) {
+    const brew = await this.prisma.brew.findFirst({
+      where: {
+        id: brewId,
+        device: {
+          owner_id: userId,
+        },
+      },
+      select: { id: true },
+    });
+
+    if (!brew) {
+      throw new NotFoundException('Brew not found');
+    }
+
+    return this.prisma.brew_status_event.findMany({
+      where: { brew_id: brewId },
+      orderBy: [{ ts: 'asc' }, { id: 'asc' }],
+      select: {
+        status: true,
+        ts: true,
+        current_temp: true,
+      },
+    });
   }
 
   async startBrew(userId: number, brewStartDto: BrewStartDto) {

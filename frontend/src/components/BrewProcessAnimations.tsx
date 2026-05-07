@@ -1,33 +1,38 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
+
+type BrewStage = 'starting' | 'heating' | 'pumping' | 'brewing' | 'completed' | 'error';
 
 type StageProps = {
   title: string;
   subtitle: string;
   active: boolean;
   progressLabel: string;
+  detail?: string | null;
   children: ReactNode;
 };
 
-function StageCard({ title, subtitle, active, progressLabel, children }: StageProps) {
+type BrewProcessAnimationsProps = {
+  stage: BrewStage;
+  heatingDetail?: string | null;
+  brewingDetail?: string | null;
+  completedDetail?: string | null;
+};
+
+function StageCard({ subtitle, active, progressLabel, detail, children }: StageProps) {
   return (
-    <article className={`rounded-2xl border p-4 transition-all duration-500 ${
-      active ? 'border-black/30 bg-white shadow-[0_12px_30px_rgba(0,0,0,0.08)]' : 'border-black/15 bg-white/70'
-    }`}
-    >
-      <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-black">
-          {title}
-        </h3>
-        <span className={`brew-live-dot ${active ? '' : 'brew-live-dot-idle'}`} aria-hidden="true" />
-      </div>
-      <div className="mb-3 h-1 overflow-hidden rounded-full bg-black/10">
-        <span className={`block h-full rounded-full bg-[#51961f] ${active ? 'brew-progress-fill' : 'w-2/5 opacity-50'}`} />
-      </div>
-      <div className={`mb-3 flex h-32 items-center justify-center rounded-xl border border-black/10 bg-[#fffdf5] ${active ? '' : 'brew-scene-inactive'}`}>
+    <article className='p-4 transition-all duration-500'>
+      <div
+        className={`mb-3 flex h-32 items-center justify-center ${
+          active ? '' : 'brew-scene-inactive'
+        }`}
+      >
         {children}
       </div>
+      {detail ? <p className="text-2xl text-black text-center font-bold">{detail}</p> : null}
       <p className="text-xs text-black/60">{subtitle}</p>
-      <p className="mt-1 text-[11px] uppercase tracking-[0.2em] text-black/40">{progressLabel}</p>
+      <p className="mt-1 text-[11px] uppercase tracking-[0.2em] text-black/40">
+        {progressLabel}
+      </p>
     </article>
   );
 }
@@ -104,6 +109,13 @@ function BrewingAnimation() {
           <path d="M29 47c8-4 14 4 22 0s14 4 21 0" className="brew-cup-shine" />
         </g>
       </svg>
+      <div className="pointer-events-none absolute inset-0 flex items-center justify-center -translate-x-2 translate-y-2">
+        <img
+          src="https://img.icons8.com/?size=100&id=m4R7gAErloIZ&format=png&color=47BA3F"
+          alt="Tea leaf"
+          className="h-5 w-5"
+        />
+      </div>
       <span className="brew-steam brew-steam-1" />
       <span className="brew-steam brew-steam-2" />
       <span className="brew-steam brew-steam-3" />
@@ -112,57 +124,92 @@ function BrewingAnimation() {
   );
 }
 
+function CompletedAnimation() {
+  return (
+    <div className="brew-scene relative h-24 w-28">
+      <svg viewBox="0 0 112 96" className="h-full w-full" aria-hidden="true">
+        <circle cx="56" cy="48" r="26" fill="#fff" stroke="rgba(0,0,0,0.25)" strokeWidth="2" />
+        <path
+          d="M42 48l9 9 20-20"
+          fill="none"
+          stroke="#51961f"
+          strokeWidth="4"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </div>
+  );
+}
+
 const STAGE_META = [
   {
-    title: 'Nagrzewanie',
-    subtitle: 'Podgrzewanie wody do zadanej temperatury.',
-    progressLabel: 'Etap 1/3',
+    key: 'heating',
+    title: 'Heating',
+    subtitle: 'Bringing water to the target temperature.',
+    progressLabel: 'Stage 1/4',
     render: <HeatingAnimation />,
   },
   {
-    title: 'Pompowanie',
-    subtitle: 'Transport gorącej wody do komory parzenia.',
-    progressLabel: 'Etap 2/3',
+    key: 'pumping',
+    title: 'Pumping',
+    subtitle: 'Moving hot water into the brewing chamber.',
+    progressLabel: 'Stage 2/4',
     render: <PumpingAnimation />,
   },
   {
-    title: 'Parzenie',
-    subtitle: 'Ekstrakcja liści i finalizacja naparu.',
-    progressLabel: 'Etap 3/3',
+    key: 'brewing',
+    title: 'Brewing',
+    subtitle: 'Extracting the leaves and finishing the infusion.',
+    progressLabel: 'Stage 3/4',
     render: <BrewingAnimation />,
+  },
+  {
+    key: 'completed',
+    title: 'Completed',
+    subtitle: 'Tea is ready for a quick rating.',
+    progressLabel: 'Stage 4/4',
+    render: <CompletedAnimation />,
   },
 ] as const;
 
-export function BrewProcessAnimations() {
-  const [activeStage, setActiveStage] = useState(0);
+const STAGE_FALLBACK: BrewStage = 'brewing';
 
-  useEffect(() => {
-    const interval = window.setInterval(() => {
-      setActiveStage((prev) => (prev + 1) % STAGE_META.length);
-    }, 3200);
+export function BrewProcessAnimations({
+  stage,
+  heatingDetail,
+  brewingDetail,
+  completedDetail,
+}: BrewProcessAnimationsProps) {
+  const normalizedStage: BrewStage = stage === 'starting' ? 'heating' : stage;
+  const activeIndex = Math.max(
+    0,
+    STAGE_META.findIndex((item) => item.key === normalizedStage),
+  );
+  const resolvedIndex = activeIndex === -1 ? STAGE_META.findIndex((item) => item.key === STAGE_FALLBACK) : activeIndex;
 
-    return () => window.clearInterval(interval);
-  }, []);
+  const activeStage = STAGE_META[resolvedIndex] ?? STAGE_META[0];
+  const detail =
+    activeStage.key === 'heating'
+      ? heatingDetail
+      : activeStage.key === 'brewing'
+        ? brewingDetail
+        : activeStage.key === 'completed'
+          ? completedDetail
+          : null;
 
   return (
     <section className="mt-6 w-full">
-      <div className="mb-3 flex items-center justify-between">
         <p className="text-xs uppercase tracking-[0.3em] text-black/50">Process</p>
-        <p className="text-xs text-black/45">Auto-sequence</p>
-      </div>
-      <div className="grid gap-3 md:grid-cols-3">
-        {STAGE_META.map((stage, index) => (
-          <StageCard
-            key={stage.title}
-            title={stage.title}
-            subtitle={stage.subtitle}
-            progressLabel={stage.progressLabel}
-            active={index === activeStage}
-          >
-            {stage.render}
-          </StageCard>
-        ))}
-      </div>
+      <StageCard
+        title={activeStage.title}
+        subtitle={activeStage.subtitle}
+        progressLabel={activeStage.progressLabel}
+        active
+        detail={detail}
+      >
+        {activeStage.render}
+      </StageCard>
     </section>
   );
 }

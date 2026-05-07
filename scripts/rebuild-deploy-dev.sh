@@ -15,17 +15,19 @@ DEPLOYMENTS=(
 
 usage() {
   cat <<'EOF'
-Usage: ./scripts/rebuild-deploy-dev.sh [--skip-build] [--skip-apply] [--help]
+Usage: ./scripts/rebuild-deploy-dev.sh [--skip-build] [--skip-apply] [--seed] [--help]
 
 Options:
   --skip-build   Skip Docker image builds and only apply/restart Kubernetes resources.
   --skip-apply   Skip kubectl apply and rollout restart steps.
+  --seed         Run prisma/seed.js after deploy (destructive).
   --help         Show this help message.
 
 Environment variables:
   NAMESPACE        Kubernetes namespace. Default: iotea
   OVERLAY_PATH     Kustomize overlay path. Default: k8s/overlays/dev
   ROLLOUT_TIMEOUT  Rollout wait timeout. Default: 120s
+  SEED_ON_DEPLOY   Run prisma/seed.js after deploy when set to true.
 EOF
 }
 
@@ -42,6 +44,7 @@ require_cmd() {
 
 SKIP_BUILD=false
 SKIP_APPLY=false
+RUN_SEED=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -50,6 +53,9 @@ while [[ $# -gt 0 ]]; do
       ;;
     --skip-apply)
       SKIP_APPLY=true
+      ;;
+    --seed)
+      RUN_SEED=true
       ;;
     --help|-h)
       usage
@@ -66,6 +72,10 @@ done
 
 require_cmd docker
 require_cmd kubectl
+
+if [[ "${SEED_ON_DEPLOY:-}" == "true" ]]; then
+  RUN_SEED=true
+fi
 
 rollback() {
   log 'Deployment failed. Rolling back Kubernetes deployments.'
@@ -110,7 +120,12 @@ deploy_k8s() {
   kubectl -n "$NAMESPACE" rollout restart deployment/iotea-backend
   kubectl -n "$NAMESPACE" rollout restart deployment/iotea-worker-mqtt
   kubectl -n "$NAMESPACE" rollout restart deployment/iotea-frontend
-  kubectl -n "$NAMESPACE" exec deploy/iotea-backend -- node prisma/seed.js
+  if [[ "$RUN_SEED" == true ]]; then
+    log 'Running prisma/seed.js (destructive).'
+    kubectl -n "$NAMESPACE" exec deploy/iotea-backend -- node prisma/seed.js
+  else
+    log 'Skipping prisma/seed.js.'
+  fi
 
   log 'Waiting for rollouts to complete.'
   for deployment in "${DEPLOYMENTS[@]}"; do

@@ -38,6 +38,15 @@ export class BrewController {
   ) {
     return this.brewService.getStatus(user.id, id);
   }
+
+  @ApiOperation({ summary: 'Get brew status history' })
+  @Get(':id/history')
+  getHistory(
+    @User() user: { id: number },
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.brewService.getHistory(user.id, id);
+  }
   @ApiOperation({ summary: 'Start a new brew' })
   @ApiBody({ type: BrewStartDto })
   @Post('/start')

@@ -11,6 +11,7 @@ model brew {
     status String
     created_at DateTime @default(now())
     updated_at DateTime @updatedAt
+    brew_status_events brew_status_event[]
     @@index([device_id])
     @@index([start_time])
 }

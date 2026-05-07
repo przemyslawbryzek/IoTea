@@ -1,5 +1,5 @@
 import type { DeviceStatus, DeviceSummary } from '../interfaces/device.interface';
-import type { BrewSummary } from '../interfaces/brew.interface';
+import type { BrewStatusEvent, BrewSummary } from '../interfaces/brew.interface';
 import type { LoginResponse } from '../interfaces/login.interface';
 import type {
   MyTeaDetail,
@@ -130,6 +130,10 @@ export async function deleteDevice(deviceId: number) {
 
 export async function getBrews() {
   return request<BrewSummary[]>('/brews', { auth: true });
+}
+
+export async function getBrewHistory(brewId: number) {
+  return request<BrewStatusEvent[]>(`/brews/${brewId}/history`, { auth: true });
 }
 
 export async function getDeviceStatus(deviceId: number) {

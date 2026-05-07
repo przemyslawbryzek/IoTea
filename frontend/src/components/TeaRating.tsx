@@ -18,8 +18,8 @@ export function TeaRating({ value, onRate, loading = false }: TeaRatingProps) {
   const inactiveButton = 'border-black/20 bg-white';
 
   return (
-    <div className="mt-6 w-full max-w-xl rounded-2xl border border-black/15 p-4">
-      <p className="text-xs uppercase tracking-[0.35em] text-black/50">Ocena</p>
+    <div className="mt-6 w-full max-w-xl p-4">
+      <p className="text-xs uppercase tracking-[0.35em] text-black/50">Rate the tea</p>
       <div className="mt-3 flex flex-wrap gap-3">
         <button
           type="button"
@@ -40,7 +40,7 @@ export function TeaRating({ value, onRate, loading = false }: TeaRatingProps) {
           Dont like
         </button>
       </div>
-      {loading ? <p className="mt-3 text-xs text-black/50">Zapisywanie oceny...</p> : null}
+      {loading ? <p className="mt-3 text-xs text-black/50">Saving rating...</p> : null}
     </div>
   );
 }

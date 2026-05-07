@@ -41,9 +41,9 @@ except ImportError:  # pragma: no cover - allows local dev without RPi GPIO
 
 
 class HeaterManager:
-	"""Simple ON/OFF heater controller for relay on GPIO 16 (BCM numbering)."""
+	"""Simple ON/OFF heater controller for relay on GPIO 12 (BCM numbering)."""
 
-	def __init__(self, pin: int = 16, active_high: bool = True):
+	def __init__(self, pin: int = 12, active_high: bool = True):
 		self.pin = pin
 		self.active_high = active_high
 		self._is_on = False
@@ -94,6 +94,52 @@ class HeaterManager:
 	def is_on(self) -> bool:
 		return self._is_on
 
+	def heat_to_temperature(
+		self,
+		target_celsius: float,
+		sensor: DS18B20Sensor,
+		tolerance_celsius: float = 0.5,
+		max_seconds: float = 900,
+		poll_interval: float = 1.0,
+	):
+		"""Heat until the sensor reaches target temperature (simple ON/OFF control)."""
+		if target_celsius <= 0:
+			raise ValueError("target_celsius must be > 0")
+		if tolerance_celsius < 0:
+			raise ValueError("tolerance_celsius must be >= 0")
+		if max_seconds <= 0:
+			raise ValueError("max_seconds must be > 0")
+		if poll_interval <= 0:
+			raise ValueError("poll_interval must be > 0")
+
+		start_time = time.time()
+		last_temp = None
+
+		self.on()
+		try:
+			while True:
+				elapsed = time.time() - start_time
+				if elapsed >= max_seconds:
+					raise TimeoutError(
+						f"Max heating time exceeded ({max_seconds}s) before reaching target"
+					)
+
+				try:
+					last_temp = sensor.get_temperature()
+				except Exception as error:
+					logger.warning("Temperature read failed: %s", error)
+					time.sleep(poll_interval)
+					continue
+
+				logger.info("Heating... current=%.2fC target=%.2fC", last_temp, target_celsius)
+				if last_temp >= target_celsius - tolerance_celsius:
+					break
+				time.sleep(poll_interval)
+		finally:
+			self.off()
+
+		return last_temp
+
 	def cleanup(self):
 		"""Safe shutdown: force OFF and cleanup selected GPIO pin."""
 		if self._cleaned:
@@ -132,10 +178,21 @@ if __name__ == "__main__":
 	except Exception as error:
 		logger.warning("Cannot read DS18B20 before heating: %s", error)
 
-	heater = HeaterManager(pin=16, active_high=True)
+	heater = HeaterManager(pin=12, active_high=True)
 	try:
-		logger.info("Demo: heater ON for 60 seconds")
-		heater.pulse(120)
+		if sensor is None:
+			raise RuntimeError("No temperature sensor available")
+
+		target_temperature = 85.0
+		logger.info("Demo: heating to %.1fC", target_temperature)
+		final_temp = heater.heat_to_temperature(
+			target_celsius=target_temperature,
+			sensor=sensor,
+			tolerance_celsius=0.5,
+			max_seconds=900,
+			poll_interval=1.0,
+		)
+		logger.info("Target reached, final temperature: %.2fC", final_temp)
 
 		if sensor is not None:
 			try:

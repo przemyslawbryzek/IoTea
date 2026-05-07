@@ -153,6 +153,14 @@ export class WorkerService implements OnModuleInit, OnModuleDestroy {
       await this.redis.set(redisKey, redisValue, { EX: DEVICE_STATUS_TTL });
     }
 
+    await this.prisma.device_status_event.create({
+      data: {
+        device_id: parseInt(device_id, 10),
+        status,
+        ts: new Date(timestamp * 1000),
+      },
+    });
+
     await this.prisma.device.updateMany({
       where: { mqtt_username: { contains: `dev_` }, id: parseInt(device_id) },
       data: {
@@ -186,29 +194,64 @@ export class WorkerService implements OnModuleInit, OnModuleDestroy {
     device_id: string;
     brew_id?: number;
     status?: string;
+    timestamp?: number;
   }): Promise<void> {
-    const { device_id, brew_id, status } = data;
+    const { device_id, brew_id, status, timestamp } = data;
+    const normalizedStatus = status || 'brewing';
+    const allowedStatuses = new Set(['starting', 'heating', 'pumping', 'brewing', 'completed', 'error']);
 
     if (!device_id || !brew_id) {
       this.logger.warn(`Invalid brew ack payload: ${JSON.stringify(data)}`);
       return;
     }
 
+    if (!allowedStatuses.has(normalizedStatus)) {
+      this.logger.warn(
+        `Unknown brew ack status "${normalizedStatus}" for brew ${brew_id}`,
+      );
+      return;
+    }
+
     this.logger.log(
-      `Brew ACK received - Device: ${device_id}, Brew ID: ${brew_id}, Status: ${status || 'brewing'}`,
+      `Brew ACK received - Device: ${device_id}, Brew ID: ${brew_id}, Status: ${normalizedStatus}`,
     );
 
     try {
+      const updateData: { status: string; start_time?: Date } = {
+        status: normalizedStatus,
+      };
+
+      if (normalizedStatus === 'brewing') {
+        const brewStartTs = timestamp ? timestamp * 1000 : Date.now();
+        updateData.start_time = new Date(brewStartTs);
+      }
+
       await this.prisma.brew.update({
         where: { id: brew_id },
-        data: {
-          status: status || 'brewing',
-        },
+        data: updateData,
       });
 
       this.logger.log(
-        `Updated brew ${brew_id} status to "${status || 'brewing'}"`,
+        `Updated brew ${brew_id} status to "${normalizedStatus}"`,
       );
+      const ackTimestamp = timestamp ? timestamp * 1000 : Date.now();
+      const eventTemp = await this._getCurrentTemperature(device_id);
+      await this.prisma.brew_status_event.create({
+        data: {
+          brew_id,
+          device_id: parseInt(device_id, 10),
+          status: normalizedStatus,
+          ts: new Date(ackTimestamp),
+          current_temp: eventTemp?.temperature ?? null,
+        },
+      });
+
+      await this._publishBrewStatus({
+        brew_id,
+        device_id,
+        status: normalizedStatus,
+        timestamp: ackTimestamp,
+      });
     } catch (error) {
       this.logger.error(`Failed to update brew ${brew_id}: ${error.message}`);
     }
@@ -232,19 +275,84 @@ export class WorkerService implements OnModuleInit, OnModuleDestroy {
     );
 
     try {
+      const endTimestamp = timestamp ? timestamp * 1000 : Date.now();
       await this.prisma.brew.update({
         where: { id: brew_id },
         data: {
           status: status,
-          end_time: timestamp ? new Date(timestamp * 1000) : new Date(),
+          end_time: new Date(endTimestamp),
         },
       });
 
       this.logger.log(
         `Updated brew ${brew_id} status to "${status}" with finish time`,
       );
+      const eventTemp = await this._getCurrentTemperature(device_id);
+      await this.prisma.brew_status_event.create({
+        data: {
+          brew_id,
+          device_id: parseInt(device_id, 10),
+          status,
+          ts: new Date(endTimestamp),
+          current_temp: eventTemp?.temperature ?? null,
+        },
+      });
+
+      await this._publishBrewStatus({
+        brew_id,
+        device_id,
+        status,
+        timestamp: endTimestamp,
+      });
     } catch (error) {
       this.logger.error(`Failed to update brew end ${brew_id}: ${error.message}`);
+    }
+  }
+
+  private async _publishBrewStatus(payload: {
+    brew_id: number;
+    device_id: string;
+    status: string;
+    timestamp?: number;
+  }): Promise<void> {
+    try {
+      const temperature = await this._getCurrentTemperature(payload.device_id);
+      const message = {
+        ...payload,
+        timestamp: payload.timestamp ?? Date.now(),
+        current_temp: temperature?.temperature ?? null,
+        current_temp_updated_at: temperature
+          ? new Date(temperature.timestamp * 1000).toISOString()
+          : null,
+      };
+      await this.redis.publish('brew:status', JSON.stringify(message));
+    } catch (error) {
+      this.logger.warn(`Failed to publish brew status: ${error.message}`);
+    }
+  }
+
+  private async _getCurrentTemperature(deviceId: string): Promise<
+    | {
+        temperature: number;
+        timestamp: number;
+      }
+    | null
+  > {
+    try {
+      const raw = await this.redis.get(`device:${deviceId}:temp`);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw) as {
+        temperature?: number;
+        timestamp?: number;
+      };
+
+      if (typeof parsed.temperature !== 'number' || typeof parsed.timestamp !== 'number') {
+        return null;
+      }
+
+      return { temperature: parsed.temperature, timestamp: parsed.timestamp };
+    } catch {
+      return null;
     }
   }
 

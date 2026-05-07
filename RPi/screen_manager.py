@@ -18,6 +18,8 @@ logger = logging.getLogger(__name__)
 
 class ScreenState(Enum):
     STARTUP = "startup"
+    HEATING = "heating"
+    PUMPING = "pumping"
     BREWING = "brewing"
     ERROR = "error"
     BLE_PAIRING = "ble_pairing"
@@ -178,6 +180,24 @@ class ScreenManager:
             
             if brewing:
                 self._draw_brewing(draw, progress)
+            elif state == ScreenState.HEATING:
+                self._draw_operational(
+                    draw,
+                    device_id,
+                    signal,
+                    mqtt,
+                    custom_title="HEATING",
+                    custom_message=message,
+                )
+            elif state == ScreenState.PUMPING:
+                self._draw_operational(
+                    draw,
+                    device_id,
+                    signal,
+                    mqtt,
+                    custom_title="PUMPING",
+                    custom_message=message,
+                )
             elif message:
                 self._draw_operational(draw, device_id, signal, mqtt, custom_message=message)
             elif state == ScreenState.BLE_PAIRING:

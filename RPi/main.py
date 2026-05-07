@@ -15,6 +15,8 @@ from screen_manager import ScreenManager, ScreenState
 from menus import MenuManager
 from encoder import EncoderController
 from DS18B20 import DS18B20Sensor
+from heater_manager import HeaterManager
+from pump_manager import PumpManager
 
 logging.basicConfig(
     level=logging.INFO,
@@ -78,6 +80,8 @@ class TeaDevice:
         self.ble_server = None
         self.brew_manager = None
         self.temperature_sensor = DS18B20Sensor()
+        self.heater_manager = HeaterManager(pin=12, active_high=True)
+        self.pump_manager = PumpManager(pin=13, active_high=True)
         self.screen_manager = ScreenManager(self.temperature_sensor)
         self.menu_manager = None
         self.encoder_controller = None
@@ -239,9 +243,19 @@ class TeaDevice:
             self.mqtt_client.publish_status('online')
             self._last_status_publish = time.time()
             if not self.brew_manager:
-                self.brew_manager = BrewManager(self.mqtt_client, self.config_manager, self.screen_manager)
+                self.brew_manager = BrewManager(
+                    self.mqtt_client,
+                    self.config_manager,
+                    self.screen_manager,
+                    temperature_sensor=self.temperature_sensor,
+                    heater_manager=self.heater_manager,
+                    pump_manager=self.pump_manager,
+                )
             else:
                 self.brew_manager.mqtt_client = self.mqtt_client
+                self.brew_manager.temperature_sensor = self.temperature_sensor
+                self.brew_manager.heater_manager = self.heater_manager
+                self.brew_manager.pump_manager = self.pump_manager
             self.state = DeviceState.OPERATIONAL
         else:
             logger.error("MQTT connection failed")
@@ -358,9 +372,19 @@ class TeaDevice:
         self.online = False
 
         if not self.brew_manager:
-            self.brew_manager = BrewManager(self.mqtt_client, self.config_manager, self.screen_manager)
+            self.brew_manager = BrewManager(
+                self.mqtt_client,
+                self.config_manager,
+                self.screen_manager,
+                temperature_sensor=self.temperature_sensor,
+                heater_manager=self.heater_manager,
+                pump_manager=self.pump_manager,
+            )
         else:
             self.brew_manager.mqtt_client = self.mqtt_client
+            self.brew_manager.temperature_sensor = self.temperature_sensor
+            self.brew_manager.heater_manager = self.heater_manager
+            self.brew_manager.pump_manager = self.pump_manager
 
         if not self.encoder_controller:
             self.encoder_controller = EncoderController()
@@ -416,6 +440,12 @@ class TeaDevice:
 
         if self.screen_manager:
             self.screen_manager.stop()
+
+        if self.heater_manager:
+            self.heater_manager.cleanup()
+
+        if self.pump_manager:
+            self.pump_manager.cleanup()
 
         logger.info("Shutdown complete")
 

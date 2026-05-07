@@ -278,7 +278,9 @@ class MenuManager:
                 'first_infusion_seconds': duration,
                 'max_infusions': 1,
                 'increment_seconds': 0,
-                'grams_per_100ml': 0
+                'grams_per_100ml': 0,
+                'temperature_c': temp,
+                'volume_ml': vol
             }
             
             result = self.brew_manager.start_local_brew(tea, style)
