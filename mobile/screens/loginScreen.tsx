@@ -13,6 +13,7 @@ import tw from 'twrnc';
 import { theme } from '../styles/theme';
 import { login } from '../services/api';
 import { useSwipeBack } from '../hooks/useSwipeBack';
+import { registerForPushNotifications } from '../services/notifications';
 
 interface LoginScreenProps {
   navigation: any;
@@ -33,6 +34,11 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
     setLoading(true);
     try {
       await login(email, password);
+      try {
+        await registerForPushNotifications();
+      } catch (pushError) {
+        console.warn('Push registration failed', pushError);
+      }
       navigation.replace('HomeHub');
     } catch (error: any) {
       Alert.alert('Login failed', error.message || 'Please check your email and password.');

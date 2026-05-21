@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
-import { BrowserRouter, Navigate, Route, Routes, Link, useLocation } from 'react-router-dom';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { BrowserRouter, Navigate, Route, Routes, Link, useLocation, useNavigate } from 'react-router-dom';
+import { io, type Socket } from 'socket.io-client';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { HomePage } from './pages/HomePage';
@@ -12,6 +13,10 @@ import { DevicesPage } from './pages/DevicesPage';
 import { AccountPage } from './pages/AccountPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import logo from './assets/logo.png';
+import { InAppNotifications, type InAppNotification } from './components/InAppNotifications';
+import { getAccessToken } from './services/auth';
+
+const WS_BASE_URL = import.meta.env.VITE_WS_URL ?? window.location.origin;
 
 function Navigation() {
   const location = useLocation();
@@ -55,6 +60,23 @@ function Navigation() {
 
 function AppContent() {
   const { authenticated, loading } = useAuth();
+  const [notifications, setNotifications] = useState<InAppNotification[]>([]);
+
+  const handleDismiss = useCallback((id: string) => {
+    setNotifications((prev) => prev.filter((item) => item.id !== id));
+  }, []);
+
+  const handlePush = useCallback((payload: { brew_id: number; tea_name?: string | null }) => {
+    setNotifications((prev) => {
+      const next = [{
+        id: `${payload.brew_id}-${Date.now()}`,
+        title: 'Tea is ready',
+        message: payload.tea_name ? `${payload.tea_name} is ready.` : 'Your tea is ready.',
+        href: `/brew/${payload.brew_id}`,
+      }, ...prev];
+      return next.slice(0, 3);
+    });
+  }, []);
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -67,6 +89,11 @@ function AppContent() {
     <BrowserRouter>
       <div className="min-h-screen">
         <Navigation />
+        <BrewNotifications
+          authenticated={authenticated}
+          onNotification={handlePush}
+        />
+        <NotificationHost items={notifications} onDismiss={handleDismiss} />
         <Routes>
           {authenticated ? (
             <>
@@ -93,6 +120,63 @@ function AppContent() {
         </Routes>
       </div>
     </BrowserRouter>
+  );
+}
+
+function BrewNotifications({
+  authenticated,
+  onNotification,
+}: {
+  authenticated: boolean;
+  onNotification: (payload: { brew_id: number; tea_name?: string | null }) => void;
+}) {
+  const socketRef = useRef<Socket | null>(null);
+
+  useEffect(() => {
+    if (!authenticated) return;
+    const token = getAccessToken();
+    if (!token) return;
+
+    const socket = io(`${WS_BASE_URL}/brews`, {
+      transports: ['websocket'],
+      auth: { token },
+    });
+
+    socketRef.current = socket;
+
+    socket.on('brew-complete', (payload: { brew_id: number; tea_name?: string | null }) => {
+      if (!payload?.brew_id) return;
+      onNotification(payload);
+    });
+
+    socket.on('connect_error', (socketError: Error) => {
+      console.warn('Brew notification socket error', socketError);
+    });
+
+    return () => {
+      socket.disconnect();
+      socketRef.current = null;
+    };
+  }, [authenticated, onNotification]);
+
+  return null;
+}
+
+function NotificationHost({
+  items,
+  onDismiss,
+}: {
+  items: InAppNotification[];
+  onDismiss: (id: string) => void;
+}) {
+  const navigate = useNavigate();
+
+  return (
+    <InAppNotifications
+      items={items}
+      onDismiss={onDismiss}
+      onOpen={(href) => navigate(href)}
+    />
   );
 }
 

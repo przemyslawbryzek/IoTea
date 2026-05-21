@@ -12,6 +12,7 @@ model user {
   tea_favorites tea_favorite[]
   user_tea_ratings user_tea_rating[]
   user_tea_favorites user_tea_favorite[]
+  push_tokens push_token[]
 }
 
 enum role {

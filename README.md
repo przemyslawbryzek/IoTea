@@ -173,5 +173,5 @@ Opcje:
 
 ## Uwagi
 
-- Konfiguracja w [k8s/overlays/dev/secret.yaml](k8s/overlays/dev/secret.yaml) jest tylko do developmentu lokalnego.
-- Sekrety DEV są jawne i nie nadają się do środowiska produkcyjnego.
+- Skopiuj [k8s/overlays/dev/secret.example.yaml](k8s/overlays/dev/secret.example.yaml) do k8s/overlays/dev/secret.yaml i uzupełnij wartości dla lokalnego DEV.
+- Sekrety DEV nie nadają się do środowiska produkcyjnego.

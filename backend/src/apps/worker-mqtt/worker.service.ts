@@ -8,6 +8,7 @@ import {
 import * as mqtt from 'mqtt';
 import { PrismaClient } from '@prisma/client';
 import type { RedisClientType } from 'redis';
+import { NotificationsService } from '../notifications/notifications.service';
 
 const DEVICE_STATUS_TTL = 90;
 const DEVICE_STATUS_KEY = (deviceId: string) => `device:${deviceId}:status`;
@@ -20,6 +21,7 @@ export class WorkerService implements OnModuleInit, OnModuleDestroy {
   constructor(
     @Inject('PRISMA') private readonly prisma: PrismaClient,
     @Inject('REDIS') private readonly redis: RedisClientType,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   onModuleInit() {
@@ -275,6 +277,21 @@ export class WorkerService implements OnModuleInit, OnModuleDestroy {
     );
 
     try {
+      const existing = await this.prisma.brew.findUnique({
+        where: { id: brew_id },
+        select: {
+          status: true,
+          end_time: true,
+          device: { select: { owner_id: true } },
+          instruction: {
+            select: {
+              tea: { select: { name: true } },
+              userTea: { select: { name: true } },
+            },
+          },
+        },
+      });
+
       const endTimestamp = timestamp ? timestamp * 1000 : Date.now();
       await this.prisma.brew.update({
         where: { id: brew_id },
@@ -298,12 +315,25 @@ export class WorkerService implements OnModuleInit, OnModuleDestroy {
         },
       });
 
+      const ownerId = existing?.device?.owner_id ?? null;
+      const teaName = existing?.instruction.userTea?.name ?? existing?.instruction.tea?.name ?? null;
+
       await this._publishBrewStatus({
         brew_id,
         device_id,
         status,
         timestamp: endTimestamp,
+        owner_id: ownerId ?? undefined,
+        tea_name: teaName ?? undefined,
       });
+
+      const shouldNotify = status === 'completed' && !existing?.end_time;
+      if (shouldNotify && ownerId) {
+        await this.notificationsService.notifyBrewCompleted(ownerId, {
+          brewId: brew_id,
+          teaName,
+        });
+      }
     } catch (error) {
       this.logger.error(`Failed to update brew end ${brew_id}: ${error.message}`);
     }
@@ -314,6 +344,8 @@ export class WorkerService implements OnModuleInit, OnModuleDestroy {
     device_id: string;
     status: string;
     timestamp?: number;
+    owner_id?: number;
+    tea_name?: string;
   }): Promise<void> {
     try {
       const temperature = await this._getCurrentTemperature(payload.device_id);

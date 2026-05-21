@@ -2,7 +2,7 @@ import axios, { AxiosInstance, AxiosResponse } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Tea } from './interfaces/tea.interface';
 import { DeviceStatus, RegisterDeviceResponse } from './interfaces/device.interface';
-import { BrewSummary } from './interfaces/brew.interface';
+import { BrewStatusEvent, BrewSummary } from './interfaces/brew.interface';
 import { LoginResponse } from './interfaces/login.interface';
 import {
   MyTeaDetail,
@@ -12,7 +12,9 @@ import {
   MyTeaSummary,
 } from './interfaces/mytea.interface';
  
-const API_URL = 'http://10.0.2.2:30080/api';
+const API_URL = 'http://192.168.18.101:30080/api';
+
+let serverTimeOffsetMs = 0;
 
 const api: AxiosInstance = axios.create({
   baseURL: API_URL,
@@ -28,7 +30,16 @@ api.interceptors.request.use(async (config) => {
 });
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    const dateHeader = response.headers?.date as string | undefined;
+    if (dateHeader) {
+      const serverTime = Date.parse(dateHeader);
+      if (!Number.isNaN(serverTime)) {
+        serverTimeOffsetMs = Date.now() - serverTime;
+      }
+    }
+    return response;
+  },
   async (error) => {
     const originalRequest = error.config;
 
@@ -68,6 +79,8 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+export const getServerNow = () => Date.now() - serverTimeOffsetMs;
 
 export const login = async (email: string, password: string): Promise<LoginResponse> => {
   const response: AxiosResponse<LoginResponse> = await api.post('/auth/login', { email, password });
@@ -209,6 +222,11 @@ export const getBrews = async (): Promise<BrewSummary[]> => {
   return response.data;
 };
 
+export const getBrewHistory = async (brewId: number): Promise<BrewStatusEvent[]> => {
+  const response: AxiosResponse<BrewStatusEvent[]> = await api.get(`/brews/${brewId}/history`);
+  return response.data;
+};
+
 export const startBrew = async (brewData: {
   deviceId: number;
   instructionId: number;
@@ -216,5 +234,24 @@ export const startBrew = async (brewData: {
   brewNumber: number;
 }): Promise<{ id: number }> => {
   const response = await api.post('/brews/start', brewData);
+  return response.data;
+};
+
+export const registerMobilePushToken = async (token: string, platform: 'ios' | 'android'): Promise<{ ok: boolean }> => {
+  const response = await api.post('/notifications/mobile/token', { token, platform });
+  return response.data;
+};
+
+export const removeMobilePushToken = async (token: string, platform: 'ios' | 'android'): Promise<{ ok: boolean }> => {
+  const response = await api.post('/notifications/mobile/token/remove', { token, platform });
+  return response.data;
+};
+
+export const setTeaRating = async (
+  teaId: number,
+  source: 'base' | 'user',
+  value: 0 | 1,
+): Promise<{ value: number; rating_percent?: number | null }> => {
+  const response = await api.post(`/tea/${teaId}/rating`, { value }, { params: { source } });
   return response.data;
 };

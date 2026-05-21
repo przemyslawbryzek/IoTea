@@ -233,8 +233,8 @@ export default function TeaDetailsScreen({ navigation, route }: TeaDetailsScreen
         volumeMl: waterAmount,
         brewNumber,
       });
-      Alert.alert('Brew started', `Brew #${brew.id} started`);
       setBrewNumber((current) => current + 1);
+      navigation.navigate('Brew', { id: brew.id });
     } catch (error) {
       console.error('Error starting brew:', error);
     } finally {

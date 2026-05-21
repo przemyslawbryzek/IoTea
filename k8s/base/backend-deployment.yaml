@@ -94,3 +94,18 @@ spec:
                 secretKeyRef:
                   name: iotea-secrets
                   key: MQTT_API_PASSWORD
+            - name: FIREBASE_PROJECT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: iotea-secrets
+                  key: FIREBASE_PROJECT_ID
+            - name: FIREBASE_CLIENT_EMAIL
+              valueFrom:
+                secretKeyRef:
+                  name: iotea-secrets
+                  key: FIREBASE_CLIENT_EMAIL
+            - name: FIREBASE_PRIVATE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: iotea-secrets
+                  key: FIREBASE_PRIVATE_KEY

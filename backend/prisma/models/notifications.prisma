@@ -1,0 +1,11 @@
+model push_token {
+  id Int @id @default(autoincrement())
+  user_id Int
+  user user @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  token String @unique
+  platform String
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@index([user_id])
+}

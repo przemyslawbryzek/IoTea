@@ -9,6 +9,7 @@ import { BrewModule } from './brew/brew.module';
 import { MqttModule } from './mqtt/mqtt.module';
 import { UserModule } from './user/user.module';
 import { MyTeaModule } from './mytea/mytea.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { MyTeaModule } from './mytea/mytea.module';
     MqttModule,
     UserModule,
     MyTeaModule,
+    NotificationsModule,
   ],
 })
 export class ApiModule {}

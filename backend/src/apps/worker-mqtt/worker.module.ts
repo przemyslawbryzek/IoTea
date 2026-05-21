@@ -3,6 +3,7 @@ import { WorkerService } from './worker.service';
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { createClient } from 'redis';
+import { NotificationsService } from '../notifications/notifications.service';
 
 const PrismaProvider = {
   provide: 'PRISMA',
@@ -27,7 +28,13 @@ const RedisProvider = {
   },
 };
 
+const NotificationsProvider = {
+  provide: NotificationsService,
+  useFactory: (prisma: PrismaClient) => new NotificationsService(prisma),
+  inject: ['PRISMA'],
+};
+
 @Module({
-  providers: [PrismaProvider, RedisProvider, WorkerService],
+  providers: [PrismaProvider, RedisProvider, NotificationsProvider, WorkerService],
 })
 export class WorkerModule {}

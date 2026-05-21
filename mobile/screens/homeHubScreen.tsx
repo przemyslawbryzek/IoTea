@@ -3,7 +3,6 @@ import {
   View,
   Text,
   TouchableOpacity,
-  Alert,
   Image,
   Dimensions,
 } from 'react-native';
@@ -39,12 +38,12 @@ const orbitBubbles: BubbleAction[] = [
   },
   {
     id: 'brew',
-    label: 'Brew',
+    label: 'Brews',
     iconUrl: 'https://img.icons8.com/?size=100&id=273&format=png&color=000000',
     size: 88,
     x: width * 0.72,
     y: 210,
-    onPress: () => Alert.alert('Brew', 'Brew screen is coming soon.'),
+    onPress: (navigation) => navigation.navigate('Brews'),
   },
   {
     id: 'account',

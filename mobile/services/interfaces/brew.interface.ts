@@ -9,6 +9,7 @@ export interface BrewSummary {
   tea_image_url?: string | null;
   tea_temp?: number | null;
   max_brew?: number;
+  total_brew_seconds?: number | null;
   volume_ml: number;
   brew_number: number;
   start_time: string;
@@ -16,4 +17,10 @@ export interface BrewSummary {
   status: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface BrewStatusEvent {
+  status: string;
+  ts: string;
+  current_temp?: number | null;
 }
