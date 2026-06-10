@@ -13,6 +13,7 @@ import type { CurrentUser } from '../interfaces/user.interface';
 import { getAccessToken } from './auth';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? '/api';
+let serverTimeOffsetMs = 0;
 
 type HealthResponse = {
   status: string;
@@ -44,6 +45,14 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     body: options.body ? JSON.stringify(options.body) : undefined,
   });
 
+  const dateHeader = response.headers.get('date');
+  if (dateHeader) {
+    const serverTime = Date.parse(dateHeader);
+    if (!Number.isNaN(serverTime)) {
+      serverTimeOffsetMs = Date.now() - serverTime;
+    }
+  }
+
   if (!response.ok) {
     const payload = await response
       .json()
@@ -55,6 +64,8 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 
   return (await response.json()) as T;
 }
+
+export const getServerNow = () => Date.now() - serverTimeOffsetMs;
 
 export async function getHealth() {
   return request<HealthResponse>('/health');

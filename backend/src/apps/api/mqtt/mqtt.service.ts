@@ -68,9 +68,10 @@ export class MqttService implements OnModuleInit, OnModuleDestroy {
     if (brewTemperatureCelsius === undefined || brewTemperatureCelsius === null) {
       throw new Error(`Instruction ${brewData.instructionId} has no brew temperature source`);
     }
+    const infusionIndex = Math.max(1, Math.min(brewData.brewNumber, instruction.max_infusions));
     const totalBrewSeconds =
       instruction.first_infusion_seconds +
-      instruction.increment_seconds * (instruction.max_infusions - 1);
+      instruction.increment_seconds * (infusionIndex - 1);
 
     const topic = `cmd/${deviceId}/brew/start`;
     const payload = {

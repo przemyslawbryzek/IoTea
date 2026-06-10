@@ -98,7 +98,7 @@ export class AuthService {
     });
     return {
       ...device,
-      mqtt_broker: 'mqtt://192.168.18.101:1883',
+      mqtt_broker: 'mqtt://10.91.152.12:1883',
     };
   }
 }

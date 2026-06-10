@@ -1,0 +1,17 @@
+[Unit]
+Description=IoTea RPi Service
+After=network.target bluetooth.target
+Wants=bluetooth.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/iot/RPi
+ExecStart=/home/iot/RPi/venv/bin/python /home/iot/RPi/main.py
+Restart=on-failure
+RestartSec=3
+Environment=PYTHONUNBUFFERED=1
+Environment=VIRTUAL_ENV=/home/iot/RPi/venv
+Environment=PATH=/home/iot/RPi/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+[Install]
+WantedBy=multi-user.target

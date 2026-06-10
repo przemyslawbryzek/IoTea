@@ -12,7 +12,7 @@ import {
   MyTeaSummary,
 } from './interfaces/mytea.interface';
  
-const API_URL = 'http://192.168.18.101:30080/api';
+const API_URL = 'http://10.91.152.12:30080/api';
 
 let serverTimeOffsetMs = 0;
 

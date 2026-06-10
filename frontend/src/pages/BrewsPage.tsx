@@ -50,7 +50,7 @@ export function BrewsPage() {
           ) : brews.length ? (
             <div className="space-y-2">
               {brews.map((brew) => (
-                <Link to={`/brew/${brew.id}`} key={brew.id}>
+                <Link to={`/brew/${brew.id}`} key={brew.id} className="block">
                   <div className="rounded-2xl border border-black/15 bg-white/75 p-4">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <p className="text-base font-semibold text-black">Brew #{brew.id}</p>

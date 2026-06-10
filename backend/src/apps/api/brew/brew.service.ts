@@ -64,9 +64,10 @@ export class BrewService {
     });
 
       return brews.map((brew) => {
+        const infusionIndex = Math.max(1, Math.min(brew.brew_number, brew.instruction.max_infusions));
         const totalBrewSeconds =
           brew.instruction.first_infusion_seconds +
-          brew.instruction.increment_seconds * (brew.instruction.max_infusions - 1);
+          brew.instruction.increment_seconds * (infusionIndex - 1);
 
         return {
           ...brew,

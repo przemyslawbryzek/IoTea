@@ -99,7 +99,7 @@ class HeaterManager:
 		target_celsius: float,
 		sensor: DS18B20Sensor,
 		tolerance_celsius: float = 0.5,
-		max_seconds: float = 900,
+		max_seconds: float = 1200,
 		poll_interval: float = 1.0,
 	):
 		"""Heat until the sensor reaches target temperature (simple ON/OFF control)."""
@@ -189,7 +189,7 @@ if __name__ == "__main__":
 			target_celsius=target_temperature,
 			sensor=sensor,
 			tolerance_celsius=0.5,
-			max_seconds=900,
+			max_seconds=1200,
 			poll_interval=1.0,
 		)
 		logger.info("Target reached, final temperature: %.2fC", final_temp)

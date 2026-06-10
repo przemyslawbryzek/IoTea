@@ -4,7 +4,7 @@ import { io, type Socket } from 'socket.io-client';
 import { BrewProcessAnimations } from '../components/BrewProcessAnimations';
 import { TeaRating } from '../components/TeaRating';
 import type { BrewSummary } from '../interfaces/brew.interface';
-import { getBrewHistory, getBrews, getDeviceStatus, setTeaRating } from '../services/api';
+import { getBrewHistory, getBrews, getDeviceStatus, getServerNow, setTeaRating } from '../services/api';
 
 type BrewStage = 'starting' | 'heating' | 'pumping' | 'brewing' | 'completed' | 'error';
 
@@ -16,7 +16,7 @@ export function BrewPage() {
   const [liveStatus, setLiveStatus] = useState<BrewStage | null>(null);
   const [currentTemp, setCurrentTemp] = useState<number | null>(null);
   const [currentTempUpdatedAt, setCurrentTempUpdatedAt] = useState<string | null>(null);
-  const [now, setNow] = useState(() => Date.now());
+  const [now, setNow] = useState(() => getServerNow());
   const [statusHistory, setStatusHistory] = useState<Array<{ status: BrewStage; timestamp: number }>>([]);
   const [brewingStartedAt, setBrewingStartedAt] = useState<number | null>(null);
   const [ratingValue, setRatingValue] = useState<0 | 1 | null>(null);
@@ -111,7 +111,7 @@ export function BrewPage() {
         setLiveStatus(nextStage);
         if (payload.timestamp) {
           setStatusHistory((prev) => {
-            const next = [...prev, { status: nextStage, timestamp: payload.timestamp ?? Date.now() }]
+            const next = [...prev, { status: nextStage, timestamp: payload.timestamp ?? getServerNow() }]
               .sort((a, b) =>
                 a.timestamp === b.timestamp
                   ? statusOrder[a.status] - statusOrder[b.status]
@@ -173,7 +173,7 @@ export function BrewPage() {
 
   useEffect(() => {
     const interval = window.setInterval(() => {
-      setNow(Date.now());
+      setNow(getServerNow());
     }, 1000);
 
     return () => window.clearInterval(interval);

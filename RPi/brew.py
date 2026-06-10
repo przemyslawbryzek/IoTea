@@ -271,7 +271,7 @@ class BrewManager:
         self,
         target_celsius,
         tolerance_celsius: float = 0.5,
-        max_seconds: float = 900,
+        max_seconds: float = 1200,
         poll_interval: float = 1.0,
     ):
         start_time = time.time()
